@@ -1,5 +1,13 @@
 module ReducedComplexityModeling
 
-# Write your package code here.
+    using GeometricIntegrators
+    using ReducedBasisMethods
 
+#-------------------------------------------------------
+    #TODO : Add exports
+#-------------------------------------------------------
+
+    include("TrainingData.jl")
+    include("Models.jl")
+    include("TrainingProblem.jl")
 end
