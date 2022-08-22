@@ -1,6 +1,6 @@
 using ReducedComplexityModeling
 using Test
+using Plots
 
-@testset "ReducedComplexityModeling.jl" begin
-    # Write your tests here.
-end
+include("GeometricData.jl")
+include("Models.jl")
