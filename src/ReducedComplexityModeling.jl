@@ -6,6 +6,9 @@ module ReducedComplexityModeling
     using GeometricEquations
     using LinearAlgebra
     using GeometricIntegratorsDiffEq:ODESolution,ODEProblem
+    using Optim
+    using ForwardDiff
+    using 
 
     include("TrainingData/TrainingData.jl")
     include("Models/Models.jl")
