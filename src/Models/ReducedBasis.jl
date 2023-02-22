@@ -24,11 +24,20 @@ function reduce!(model::ReducedBasisModel,k::Int,::POD)
 end 
 
 function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftEVD)
-
+    snapshot = model.snapshot
+    @assert mod(size(snapshot,1),2)==0 "The solutions in the snapshot are not sympletic"
+    n = floor(Int,size(snapshot,1)/2)
+    q,p = snapshot[1:n,:],snapshot[n+1:end,:]
+    cotangent_snap = [q;p]
+    U,_,_ = svd(cotangent_snap)[:,1:k]
+    reduced_basis = zeros(2*n,2*k)
+    reduced_basis[1:n,1:k] = U
+    reduced_basis[n+1:2*n,k+1:2*k] = U
+    model.reduced_basis = reduced_basis
 end
 
 function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftSVD)
-
+    
 end 
 
 function compose(prob::ODEProblem, model::ReducedBasisModel)
