@@ -87,4 +87,4 @@ end
 function project(rsol::ODESolution,model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
     Rᵦ * Array(rsol)
-end 
+end
