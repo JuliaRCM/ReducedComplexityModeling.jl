@@ -1,5 +1,7 @@
-using ReducedBasisMethods:CotangentLiftEVD,CotangentLiftSVD,ReductionAlgorithm
 struct POD end 
+struct CotangentLiftSVD end
+struct CotangentLiftEVD end
+struct ComplexSVD end
 
 """
 Reduced Basis
@@ -28,7 +30,7 @@ function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftEVD)
     @assert mod(size(snapshot,1),2)==0 "The solutions in the snapshot are not sympletic"
     n = floor(Int,size(snapshot,1)/2)
     q,p = snapshot[1:n,:],snapshot[n+1:end,:]
-    cotangent_snap = [q;p]
+    cotangent_snap = hcat(q,p)
     U,_,_ = svd(cotangent_snap)[:,1:k]
     reduced_basis = zeros(2*n,2*k)
     reduced_basis[1:n,1:k] = U
@@ -36,8 +38,33 @@ function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftEVD)
     model.reduced_basis = reduced_basis
 end
 
-function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftSVD)
-    
+function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftEVD)
+    snapshot = model.snapshot
+    @assert mod(size(snapshot,1),2)==0 "The solutions in the snapshot are not sympletic"
+    n = floor(Int,size(snapshot,1)/2)
+    q,p = snapshot[1:n,:],snapshot[n+1:end,:]
+    cotangent_snap = hcat(q,p)
+    U = eigen(cotangent_snap).vectors[:,1:k]
+    reduced_basis = zeros(2*n,2*k)
+    reduced_basis[1:n,1:k] = U
+    reduced_basis[n+1:2*n,k+1:2*k] = U
+    model.reduced_basis = reduced_basis
+end 
+
+function reduce!(model::ReducedBasisModel,k::Int,::ComplexSVD)
+    snapshot = model.snapshot
+    @assert mod(size(snapshot,1),2) == 0 "The solutions in the snapshot are not symplectic"
+    n = floor(Int,size(snapshot,1)/2)
+    q,p = snapshot[1:n,:],snapshot[n+1:end,:]
+    csvd_snap = q + 1im * p
+    U,_,_ = svd(csvd_snap)
+    ϕ,Ψ = real.(U),imag.(U)
+    reduced_basis = zeros(2*n,2*k)
+    reduced_basis[1:n,1:k] = Φ
+    reduced_basis[1:n,k+1:2*k] = -Ψ
+    reduced_basis[n+1:2*n,1:k] = Ψ
+    reduced_basis[n+1:2*n:k+1:2*k] = Φ
+    model.reduced_basis = reduced_basis
 end 
 
 function compose(prob::ODEProblem, model::ReducedBasisModel)
