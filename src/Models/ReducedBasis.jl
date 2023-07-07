@@ -68,23 +68,23 @@ function reduce!(model::ReducedBasisModel,k::Int,::ComplexSVD)
 end 
 
 function compose(prob::ODEProblem, model::ReducedBasisModel)
-    vel = prob.f 
+    vel = functions(prob).v
     Rᵦ = model.reduced_basis
 
-    function red_v(du,u,p,t)
+    function red_v(du,t,u,p)
         utemp = Rᵦ*u 
         dutemp = zero(utemp)
-        vel(dutemp,utemp,p,t)
+        vel(dutemp,t,utemp)
         du .= Rᵦ' * dutemp
     end
 
-    init = Rᵦ' * reshape(prob.u0,(length(prob.u0),1))
-    init1 = init[:,1]
-    red_prob = ODEProblem(red_v,init1,prob.tspan,prob.p)
+    u0 = initial_conditions(prob).q
+    init = Rᵦ' * reshape(u0, (length(u0),1))
+    red_prob = ODEProblem(red_v, tspan(prob), tstep(prob), init[:,1]; parameters = parameters(prob))
     red_prob
 end 
 
-function project(rsol::ODESolution,model::ReducedBasisModel)
+function project(rsol::GeometricSolution, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
-    Rᵦ * Array(rsol)
+    Rᵦ * Array(rsol.q)
 end

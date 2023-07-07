@@ -12,29 +12,29 @@ function Base.Array(sol::DataSeries)
 end 
 
 struct GeometricIntegratorData <: TrainingData
-    solution::Union{SolutionODE,ODESolution}
+    solution::GeometricSolution
     snapshot::Matrix
     
-    function GeometricIntegratorData(solution::SolutionODE)
+    function GeometricIntegratorData(solution::GeometricSolution)
         new(solution,Array(solution.q))
     end 
 
-    function GeometricIntegratorData(solution::ODESolution)
-        new(solution,Array(solution))
-    end 
+    # function GeometricIntegratorData(solution::ODESolution)
+    #     new(solution,Array(solution))
+    # end 
 end
 
 #-----------------------------------------------------------------------------------
 # Ensemble solutions
 
-abstract type AbstractDepenedence end
+abstract type AbstractDependence end
 
-struct Dependent <: AbstractDepenedence end 
+struct Dependent <: AbstractDependence end 
 
-struct Independent <: AbstractDepenedence end 
+struct Independent <: AbstractDependence end 
 
 
-function Base.Array(solutions::Vector{SolutionODE},::Dependent)
+function Base.Array(solutions::Vector{GeometricSolution},::Dependent)
     ns = length(solutions)
     nx = length(solutions[1].q)
     ny = length(solutions[1].q[1])
@@ -50,7 +50,7 @@ function Base.Array(solutions::Vector{SolutionODE},::Dependent)
     Array(Z')
 end 
 
-function Base.Array(solutions::Vector{SolutionODE},::Independent)
+function Base.Array(solutions::Vector{GeometricSolution},::Independent)
     ns = length(solutions)
     nx = length(solutions[1].q)
     ny = length(solutions[1].q[1])
@@ -65,15 +65,15 @@ function Base.Array(solutions::Vector{SolutionODE},::Independent)
 end 
 
 struct GeometricIntegratorEnsembleData <: TrainingData
-    solutions::Vector{Union{SolutionODE,ODESolution}}
+    solutions::Vector{GeometricSolution}
     snapshot::Array
     
-    function GeometricIntegratorEnsembleData(solutions::Vector{SolutionODE},deps::AbstractDepenedence)
+    function GeometricIntegratorEnsembleData(solutions::Vector{GeometricSolution},deps::AbstractDependence)
         new(solutions,Array(solutions,deps))
     end 
 
-    function GeometricIntegratorEnsembleData(solutions::Vector{ODESolution},deps::AbstractDepenedence)
+    # function GeometricIntegratorEnsembleData(solutions::Vector{ODESolution},deps::AbstractDependence)
 
-    end 
+    # end 
 end
 #----------------------------------------------------------------------------------

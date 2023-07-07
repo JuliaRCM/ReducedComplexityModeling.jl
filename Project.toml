@@ -4,18 +4,20 @@ authors = ["Michael Kraus"]
 version = "0.1.0"
 
 [deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GeometricEquations = "c85262ba-a08a-430a-b926-d29770767bf2"
-GeometricIntegrators = "dcce2d33-59f6-5b8d-9047-0defad88ae06"
-GeometricProblems = "18cb22b4-ad41-5c80-9c5f-710df63fbdc9"
+GeometricSolutions = "7843afe4-64f4-4df4-9231-049495c56661"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-ReducedBasisMethods = "91da5cd7-58ae-4d67-87db-f03d1c8da121"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [compat]
-julia = "1.6"
+julia = "1.8"
 
 [extras]
+GeometricIntegrators = "dcce2d33-59f6-5b8d-9047-0defad88ae06"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["GeometricIntegrators", "Plots", "Test"]

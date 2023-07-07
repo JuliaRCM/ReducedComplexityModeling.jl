@@ -1,6 +1,5 @@
 include("../test/Problems.jl")
 using ReducedComplexityModeling:POD,reduce!,compose
-using GeometricIntegratorsDiffEq
 
 
 begin 
@@ -22,7 +21,7 @@ begin
     # This falls into the learn function.
     reduce!(model,k,alg)
     red_prob = compose(prob,model)
-    red_sol = solve(red_prob,GIEuler(),dt=0.01)
+    red_sol = integrate(red_prob, ExplicitEuler())
     psol = project(red_sol,model)
     
     #------------------------------------------------------------------------------
@@ -31,9 +30,9 @@ begin
     # Visualization and Shennanigans
     using Plots
     atemp = 1:k
-    display(plot(red_sol,vars=(1,2),title="Reduced Basis")) 
+    display(plot(red_sol.q,vars=(1,2),title="Reduced Basis")) 
     display(plot(psol[1,:],psol[2,:],psol[3,:],title="Remade"))
-    display(plot(sol,vars=(1,2,3),title="Original"))
+    display(plot(sol.q,vars=(1,2,3),title="Original"))
 end 
 
 
