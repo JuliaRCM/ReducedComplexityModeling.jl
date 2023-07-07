@@ -18,6 +18,7 @@ GeometricEquations = "0.10"
 GeometricSolutions = "0.3"
 HDF5 = "0.16"
 LazyArrays = "1"
+Optim = "1"
 TypedTables = "1"
 julia = "1.8"
 
