@@ -14,6 +14,7 @@ Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 TypedTables = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
 
 [compat]
+ForwardDiff = "0.10"
 GeometricEquations = "0.10"
 GeometricSolutions = "0.3"
 HDF5 = "0.16"
