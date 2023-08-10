@@ -20,6 +20,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/JuliaRCM/ReducedComplexityModeling.jl",
-    devbranch="main",
+    repo   = "github.com/JuliaRCM/ReducedComplexityModeling.jl",
+    devurl = "latest",
+    devbranch = "main",
 )
