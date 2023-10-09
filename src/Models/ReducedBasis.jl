@@ -68,13 +68,12 @@ function reduce!(model::ReducedBasisModel,k::Int,::ComplexSVD)
 end 
 
 function compose(prob::ODEProblem, model::ReducedBasisModel)
-    vel = functions(prob).v
     Rᵦ = model.reduced_basis
 
     function red_v(du,t,u,p)
         utemp = Rᵦ*u 
         dutemp = zero(utemp)
-        vel(dutemp,t,utemp)
+        functions(prob).v(dutemp,t,utemp,p)
         du .= Rᵦ' * dutemp
     end
 
