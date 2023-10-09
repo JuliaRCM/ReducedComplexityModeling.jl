@@ -1,7 +1,7 @@
 #----------------------------------------------------------------------------------
 # Single solution
 
-function Base.Array(sol::DataSeries)
+function snapshot_matrix(sol::DataSeries)
     n1 = length(sol)
     n2 = length(sol[1])
     Z = zeros(n1,n2)
@@ -16,7 +16,7 @@ struct GeometricIntegratorData <: TrainingData
     snapshot::Matrix
     
     function GeometricIntegratorData(solution::GeometricSolution)
-        new(solution,Array(solution.q))
+        new(solution, snapshot_matrix(solution.q))
     end 
 
     # function GeometricIntegratorData(solution::ODESolution)
@@ -69,7 +69,7 @@ struct GeometricIntegratorEnsembleData <: TrainingData
     snapshot::Array
     
     function GeometricIntegratorEnsembleData(solutions::Vector{GeometricSolution},deps::AbstractDependence)
-        new(solutions,Array(solutions,deps))
+        new(solutions, Array(solutions, deps))
     end 
 
     # function GeometricIntegratorEnsembleData(solutions::Vector{ODESolution},deps::AbstractDependence)
