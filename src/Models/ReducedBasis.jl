@@ -1,4 +1,4 @@
-struct POD end 
+struct POD end
 struct CotangentLiftSVD end
 struct CotangentLiftEVD end
 struct ComplexSVD end
@@ -17,13 +17,13 @@ mutable struct ReducedBasisModel <: AbstractModel
 
     function ReducedBasisModel(alg,snaps)
         new(alg,snaps)
-    end 
+    end
 end
 
 function reduce!(model::ReducedBasisModel,k::Int,::POD)
     U,_,_ = svd(model.snapshot)
-    model.reduced_basis = U[:,1:k]    
-end 
+    model.reduced_basis = U[:,1:k]
+end
 
 function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftEVD)
     snapshot = model.snapshot
@@ -49,7 +49,7 @@ end
 #     reduced_basis[1:n,1:k] = U
 #     reduced_basis[n+1:2*n,k+1:2*k] = U
 #     model.reduced_basis = reduced_basis
-# end 
+# end
 
 function reduce!(model::ReducedBasisModel,k::Int,::ComplexSVD)
     snapshot = model.snapshot
@@ -65,13 +65,13 @@ function reduce!(model::ReducedBasisModel,k::Int,::ComplexSVD)
     reduced_basis[n+1:2*n,1:k] = Ψ
     reduced_basis[n+1:2*n:k+1:2*k] = Φ
     model.reduced_basis = reduced_basis
-end 
+end
 
 function compose(prob::ODEProblem, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
 
     function red_v(du,t,u,p)
-        utemp = Rᵦ*u 
+        utemp = Rᵦ*u
         dutemp = zero(utemp)
         functions(prob).v(dutemp,t,utemp,p)
         du .= Rᵦ' * dutemp
@@ -79,9 +79,9 @@ function compose(prob::ODEProblem, model::ReducedBasisModel)
 
     u0 = initial_conditions(prob).q
     init = Rᵦ' * reshape(u0, (length(u0),1))
-    red_prob = ODEProblem(red_v, tspan(prob), tstep(prob), init[:,1]; parameters = parameters(prob))
+    red_prob = ODEProblem(red_v, timespan(prob), timestep(prob), init[:,1]; parameters = parameters(prob))
     red_prob
-end 
+end
 
 function project(rsol::GeometricSolution, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
