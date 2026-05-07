@@ -1,7 +1,7 @@
 name = "ReducedComplexityModeling"
 uuid = "abb4722c-1d8e-48eb-a3bd-45b3116bfaba"
 authors = ["Michael Kraus"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
