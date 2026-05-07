@@ -2,7 +2,7 @@ struct TrainingProblem
     data::TrainingData
     model::AbstractModel
 
-    function TrainingProblem(data::TrainingData,model::AbstractModel)
+    function TrainingProblem(data::TrainingData, model::AbstractModel)
 
     end 
 end
