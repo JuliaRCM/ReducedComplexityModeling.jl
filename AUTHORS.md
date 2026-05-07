@@ -6,8 +6,6 @@ ReducedComplexityModeling' development is coordinated by a group of *principal d
 
 * [Michael Kraus](https://www.michael-kraus.org/),
   Max Planck Institute for Plasma Physics, Garching, Germany
-* Rahul Manavalan
-  Technische Universitaet Muenchen
 
 ## Contributors
 
