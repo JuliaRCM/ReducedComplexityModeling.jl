@@ -12,3 +12,6 @@ Documentation for [ReducedComplexityModeling](https://github.com/JuliaRCM/Reduce
 ```@autodocs
 Modules = [ReducedComplexityModeling]
 ```
+
+```@bibliography
+```
