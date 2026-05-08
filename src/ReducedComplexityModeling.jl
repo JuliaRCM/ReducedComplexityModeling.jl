@@ -1,18 +1,19 @@
 module ReducedComplexityModeling
 
-    using ForwardDiff
-    using GeometricEquations
-    using GeometricSolutions
-    using HDF5
-    using HDF5: H5DataStore
-    using LazyArrays
-    using LinearAlgebra
-    using Optim
-    using TypedTables
+using ForwardDiff
+using GeometricEquations
+using GeometricSolutions
+using HDF5
+using HDF5: H5DataStore
+using LazyArrays
+using LinearAlgebra
+using Optim
+using TypedTables
+using KernelAbstractions
+using AbstractNeuralNetworks: QPT, QPTOAT, Chain, NeuralNetworkParameters, NeuralNetwork
 
-    include("TrainingData/TrainingData.jl")
-    include("Models/Models.jl")
-    include("TrainingProblem.jl")
+import ChainRulesCore
+using ChainRulesCore: @thunk, Thunk
 
     export Array
     export GeometricIntegratorData, GeometricIntegratorEnsembleData
@@ -22,6 +23,8 @@ module ReducedComplexityModeling
     
     export AutoEncoderModel
 
+# needed for shuffle function
+import Random
 
     include("parameters/parameter.jl")
 
