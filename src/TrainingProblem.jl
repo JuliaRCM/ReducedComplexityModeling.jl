@@ -3,8 +3,7 @@ struct TrainingProblem
     model::AbstractModel
 
     function TrainingProblem(data::TrainingData, model::AbstractModel)
-
-    end 
+    end
 end
 
 """
@@ -14,5 +13,4 @@ Uses data from high-fidelity simulations/experiments
 and learns the latent representation of the problem.
 """
 function learn(prob::TrainingProblem)
-
 end

@@ -1,9 +1,8 @@
 
 samples = [0.0, 1.0, 2.0, 3.0, 4.0]
-h5file  = "temp.h5"
+h5file = "temp.h5"
 
 @testset "Parameter" begin
-
     @test_throws AssertionError Parameter(:μ, 1.0, 4.0, samples)
     @test_throws AssertionError Parameter(:μ, 0.0, 3.0, samples)
     @test_throws AssertionError Parameter(:μ, 1.0, 0.0, 5)
@@ -54,7 +53,7 @@ h5file  = "temp.h5"
     @test minimum(p3) == 0.0
     @test minimum(p4) == 0.0
     @test minimum(p5) == 0.0
-    
+
     @test maximum(p1) == 4.0
     @test maximum(p2) == 4.0
     @test maximum(p3) == 4.0
@@ -67,12 +66,10 @@ h5file  = "temp.h5"
 
     @test NamedTuple(p1, p2, p3) == NamedTuple{(:μ, :ν, :σ)}((p1, p2, p3))
 
-
-    h5save(h5file, p1; mode="w")
+    h5save(h5file, p1; mode = "w")
     @test isfile(h5file)
 
-    p2 = h5load(Parameter, h5file; path="μ")
+    p2 = h5load(Parameter, h5file; path = "μ")
     rm(h5file)
     @test p1 == p2
-
 end

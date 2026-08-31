@@ -1,10 +1,8 @@
 
-
 function _name(h5::H5DataStore)
     name = HDF5.name(h5)
-    name = name[findlast(isequal('/'), name)+1:end]
+    name = name[(findlast(isequal('/'), name) + 1):end]
 end
-
 
 function _create_group(h5::H5DataStore, name)
     if haskey(h5, name)
@@ -14,7 +12,6 @@ function _create_group(h5::H5DataStore, name)
     end
     return g
 end
-
 
 """
 save parameters
@@ -51,14 +48,13 @@ function read_parameters(fpath::AbstractString)
     end
 end
 
-
-function h5save(fpath::AbstractString, data, args...; mode="w", kwargs...)
+function h5save(fpath::AbstractString, data, args...; mode = "w", kwargs...)
     h5open(fpath, mode) do file
         h5save(file, data, args...; kwargs...)
     end
 end
 
-function h5load(T::Type, fpath::AbstractString, args...; mode="r", kwargs...)
+function h5load(T::Type, fpath::AbstractString, args...; mode = "r", kwargs...)
     h5open(fpath, mode) do file
         h5load(T, file, args...; kwargs...)
     end

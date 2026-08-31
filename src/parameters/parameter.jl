@@ -1,12 +1,10 @@
 
 import Base: collect, getindex, length, maximum, minimum, size, NamedTuple
 
-
 AbstractSample{DT} = Union{Nothing, AbstractVector{DT}}
 
 _sort(s::Nothing) = s
 _sort(s::AbstractVector) = sort(unique(collect(s)))
-
 
 """
 
@@ -17,7 +15,8 @@ struct Parameter{DT <: Number, ST <: AbstractSample{DT}}
     maximum::DT
     samples::ST
 
-    function Parameter(name::Symbol, minimum::DT, maximum::DT, samples::ST) where {DT, ST <: AbstractSample{DT}}
+    function Parameter(name::Symbol, minimum::DT, maximum::DT, samples::ST) where {
+            DT, ST <: AbstractSample{DT}}
         @assert minimum ≤ maximum
         if typeof(samples) <: AbstractVector
             @assert all([minimum ≤ s for s in samples])
@@ -28,18 +27,30 @@ struct Parameter{DT <: Number, ST <: AbstractSample{DT}}
     end
 end
 
-Parameter(name::AbstractString, minimum, maximum, samples) = Parameter(Symbol(name), minimum, maximum, samples)
-Parameter(name, minimum::DT, maximum::DT) where {DT} = Parameter(name, minimum, maximum, nothing)
-Parameter(name, minimum::DT, maximum::DT, n::Int) where {DT} = Parameter(name, minimum, maximum, LinRange(minimum, maximum, n))
-Parameter(name, samples::AbstractVector) = Parameter(name, minimum(samples), maximum(samples), samples)
+function Parameter(name::AbstractString, minimum, maximum, samples)
+    Parameter(Symbol(name), minimum, maximum, samples)
+end
+function Parameter(name, minimum::DT, maximum::DT) where {DT}
+    Parameter(name, minimum, maximum, nothing)
+end
+function Parameter(name, minimum::DT, maximum::DT, n::Int) where {DT}
+    Parameter(name, minimum, maximum, LinRange(minimum, maximum, n))
+end
+function Parameter(name, samples::AbstractVector)
+    Parameter(name, minimum(samples), maximum(samples), samples)
+end
 
-Base.hash(p::Parameter, h::UInt) = hash(p.name, hash(p.minimum, hash(p.maximum, hash(p.samples, h))))
+function Base.hash(p::Parameter, h::UInt)
+    hash(p.name, hash(p.minimum, hash(p.maximum, hash(p.samples, h))))
+end
 
-Base.:(==)(p1::Parameter, p2::Parameter) = (
-                                p1.name    == p2.name
-                             && p1.minimum == p2.minimum
-                             && p1.maximum == p2.maximum
-                             && p1.samples == p2.samples)
+function Base.:(==)(p1::Parameter, p2::Parameter)
+    (
+        p1.name == p2.name
+        && p1.minimum == p2.minimum
+        && p1.maximum == p2.maximum
+        && p1.samples == p2.samples)
+end
 
 function show(io::IO, p::Parameter)
     println(io, "Parameter $(p.name) with ")
@@ -49,8 +60,8 @@ function show(io::IO, p::Parameter)
     show(io, p.samples)
 end
 
-const ParameterWithSamples = Parameter{DT,ST} where {DT, ST <: AbstractVector}
-const ParameterWithoutSamples = Parameter{DT,ST} where {DT, ST <: Nothing}
+const ParameterWithSamples = Parameter{DT, ST} where {DT, ST <: AbstractVector}
+const ParameterWithoutSamples = Parameter{DT, ST} where {DT, ST <: Nothing}
 
 Base.collect(p::Parameter) = p.samples
 Base.maximum(p::Parameter) = p.maximum
@@ -66,9 +77,11 @@ hassamples(p::ParameterWithSamples) = length(p.samples) > 0
 hassamples(p::ParameterWithoutSamples) = false
 
 @inline Base.@propagate_inbounds Base.getindex(p::ParameterWithSamples, i) = p.samples[i]
-@inline Base.@propagate_inbounds Base.getindex(p::ParameterWithoutSamples, i) = error("Parameter $(p.name) indexed with $(i) but has no samples.")
+@inline Base.@propagate_inbounds Base.getindex(p::ParameterWithoutSamples,
+    i) = error("Parameter $(p.name) indexed with $(i) but has no samples.")
 @inline Base.@propagate_inbounds Base.getindex(p::ParameterWithSamples, ::Colon) = p.samples
-@inline Base.@propagate_inbounds Base.getindex(p::ParameterWithoutSamples, ::Colon) = error("Parameter $(p.name) has no samples.")
+@inline Base.@propagate_inbounds Base.getindex(
+    p::ParameterWithoutSamples, ::Colon) = error("Parameter $(p.name) has no samples.")
 
 function Base.NamedTuple(parameters::Vararg{Parameter{DT}}) where {DT}
     names = Tuple(p.name for p in parameters)

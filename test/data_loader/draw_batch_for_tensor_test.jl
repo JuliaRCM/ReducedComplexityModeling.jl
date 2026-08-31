@@ -4,12 +4,16 @@ using Random: seed!
 
 seed!(1234)
 
-function test_data_loader_for_qp_tensor(system_dim2::Int, input_time_steps::Int, n_params::Int, batch_size::Int, seq_length::Int, prediction_window::Union{Int,Nothing}=nothing)
+function test_data_loader_for_qp_tensor(
+        system_dim2::Int, input_time_steps::Int, n_params::Int, batch_size::Int,
+        seq_length::Int, prediction_window::Union{Int, Nothing} = nothing)
     _prediction_window = isnothing(prediction_window) ? seq_length : prediction_window
-    dummy_data = (q=rand(system_dim2, input_time_steps, n_params), p=rand(system_dim2, input_time_steps, n_params))
+    dummy_data = (q = rand(system_dim2, input_time_steps, n_params),
+        p = rand(system_dim2, input_time_steps, n_params))
 
     dl = DataLoader(dummy_data)
-    batch = isnothing(prediction_window) ? Batch(batch_size, seq_length) : Batch(batch_size, seq_length, prediction_window)
+    batch = isnothing(prediction_window) ? Batch(batch_size, seq_length) :
+            Batch(batch_size, seq_length, prediction_window)
 
     batch_indices_all = batch(dl)
     for batch_indices in batch_indices_all

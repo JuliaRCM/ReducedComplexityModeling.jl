@@ -8,11 +8,11 @@ struct ParameterSpace{PT <: NamedTuple, ST <: Table}
     parameters::PT
     samples::ST
 
-    function ParameterSpace(parameters::PT, samples::ST) where {PT,ST}
+    function ParameterSpace(parameters::PT, samples::ST) where {PT, ST}
         # for s in samples
         #     @assert length(parameters) == length(s)
         # end
-        new{PT,ST}(parameters, samples)
+        new{PT, ST}(parameters, samples)
     end
 end
 
@@ -28,13 +28,15 @@ function ParameterSpace(parameters::NamedTuple)
     ParameterSpace(values(parameters)...)
 end
 
-Base.:(==)(ps1::ParameterSpace, ps2::ParameterSpace) = (
-                        ps1.parameters == ps2.parameters
-                     && ps1.samples    == ps2.samples)
+function Base.:(==)(ps1::ParameterSpace, ps2::ParameterSpace)
+    (
+        ps1.parameters == ps2.parameters
+        && ps1.samples == ps2.samples)
+end
 
-
-(ps::ParameterSpace)(i::Union{Int,CartesianIndex}) = NamedTuple{keys(ps.parameters)}(ps.samples[i])
-
+function (ps::ParameterSpace)(i::Union{Int, CartesianIndex})
+    NamedTuple{keys(ps.parameters)}(ps.samples[i])
+end
 
 Base.collect(ps::ParameterSpace) = collect(ps.samples)
 Base.eachindex(ps::ParameterSpace) = eachindex(ps.samples)
@@ -45,7 +47,6 @@ Base.size(ps::ParameterSpace, d) = size(ps)[d]
 
 @inline Base.@propagate_inbounds Base.getindex(ps::ParameterSpace, args...) = getindex(ps.samples, args...)
 
-
 function ParameterSpace(h5::H5DataStore, path::AbstractString = "/")
     group = h5[path]
     samps = group["samples"]
@@ -54,7 +55,8 @@ function ParameterSpace(h5::H5DataStore, path::AbstractString = "/")
     samples = NamedTuple{Tuple(sinds)}(Tuple(svals))
 
     pgroup = group["parameters"]
-    params = NamedTuple{Symbol.(Tuple(keys(pgroup)))}(h5load(Parameter, pgroup, path = key) for key in keys(pgroup))
+    params = NamedTuple{Symbol.(Tuple(keys(pgroup)))}(h5load(Parameter, pgroup, path = key)
+    for key in keys(pgroup))
 
     ParameterSpace(params, Table(; samples...))
 end
