@@ -15,6 +15,15 @@ written.
 
 ## [Unreleased] — targeting 0.2.0
 
+### Changed
+
+- `src/data_loader/data_loader.jl` is now Unicode NFC-normalised. It stored `ṗ` as a base letter
+  plus a combining mark, three times, inherited from macOS rather than chosen. Nothing about the
+  compiled code changes — Julia's parser normalises identifiers to NFC — but a `grep` pattern or an
+  editor search typed in NFC now matches, where before it silently matched nothing. The file is
+  byte-equal to the NFC normalisation of its predecessor; no string literal was affected, and no
+  changed line falls inside a doctest block.
+
 ### New Features
 
 ### Bug Fixes
