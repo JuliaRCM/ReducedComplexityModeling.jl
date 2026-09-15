@@ -9,6 +9,7 @@
 #
 #   1. JuliaFormatter --check   BLOCKS   formatting is mechanical and always fixable
 #   2. fatou lint               WARNS    see below
+#   2.5 unicode NFC             BLOCKS   the tree is NFC, so a non-NFC file is a regression
 #   3. package load             BLOCKS   catches a syntax error or a broken include
 #
 # `fatou lint` deliberately never blocks. Measured 2026-08-31: it produces findings that are
@@ -58,14 +59,19 @@ printf '\n%spre-commit%s  %d staged .jl file(s)\n' "$dim" "$nc" "${#staged[@]}"
 status=0
 
 # ---------------------------------------------------------------- 1. formatting (blocking)
-# Honours this repository's own .JuliaFormatter.toml (style = "sciml" in 37 of 37). A hook
+# Honours this repository's own .JuliaFormatter.toml (style = "sciml" everywhere). A hook
 # cannot reach an MCP server, so this calls JuliaFormatter directly rather than through
 # Kaimon's format_code — same engine, different entry point.
+# Checked one file at a time. `format(ARGS)` returns a single Bool for the whole batch, so the
+# message could only ever name every staged file — measured 2026-09-05, a commit of seven files
+# with two offenders reported all seven, and finding the real two by hand cost a second rejected
+# commit. Per-file costs nothing: the batch call formats each file individually anyway, and
+# `.JuliaFormatter.toml` is discovered by searching upward from the file either way.
 if ! julia --startup-file=no --project=@v1.13 -e '
         using JuliaFormatter
-        ok = format(ARGS; overwrite = false)
-        ok || @error "not formatted:\n" * join(ARGS, "\n")
-        exit(ok ? 0 : 1)
+        bad = filter(f -> !format(f; overwrite = false), ARGS)
+        isempty(bad) || @error "not formatted:\n" * join(bad, "\n")
+        exit(isempty(bad) ? 0 : 1)
     ' "${staged[@]}"; then
     printf '%sformatting: FAILED%s — run JuliaFormatter over the files above, then re-stage.\n' \
            "$red" "$nc"
@@ -75,26 +81,75 @@ else
 fi
 
 # ---------------------------------------------------------------- 2. lint (advisory only)
+# fatou writes its findings AND its summary to stderr, not stdout, and exits 1 when it has any.
+# Capturing stdout alone left `lint_out` empty on every commit — measured 2026-09-07, a file with
+# 7 findings reported "clean" — so this stage was vacuous in all 38 repositories from the day it
+# was added. The verdict comes from the exit status; with findings there is no summary line, so
+# every captured line is one finding.
 if command -v fatou >/dev/null 2>&1; then
-    lint_out=$(fatou lint --force-exclude --output concise "${staged[@]}" 2>/dev/null || true)
-    if [ -n "$lint_out" ]; then
+    if lint_out=$(fatou lint --force-exclude --output concise "${staged[@]}" 2>&1); then
+        printf '%sfatou lint: clean%s\n' "$green" "$nc"
+    else
         n=$(printf '%s\n' "$lint_out" | grep -c . || true)
         printf '%sfatou lint: %s finding(s) — advisory, not blocking%s\n' "$yellow" "$n" "$nc"
         printf '%s\n' "$lint_out" | sed 's/^/    /'
-    else
-        printf '%sfatou lint: clean%s\n' "$green" "$nc"
     fi
+fi
+
+# ---------------------------------------------------------------- 2.5 unicode NFC (blocking)
+# Sources here are NFC-normalised: `ū`, `ḡ`, `ṗ`, `ẋ` as a single codepoint rather than a base
+# letter plus a combining mark. Julia's parser normalises identifiers to NFC, so an NFD file
+# compiles to byte-identical symbols and nothing about dispatch changes — but every byte-matching
+# tool (grep, ripgrep, an editor search, an agent's string replacement, Documenter's doctest
+# comparison) then fails to match a pattern typed in NFC, silently.
+#
+# Blocking, because the invariant holds tree-wide: every tracked file in Packages/ and
+# Experiments/ is NFC, so anything this stage reports is a regression rather than a backlog.
+#
+# The invariant is `s == Unicode.normalize(s, :NFC)`, never the absence of combining marks:
+# `q̇`, `v̄` and `f̄` have no precomposed codepoint and stay two codepoints under NFC.
+#
+# The check is inlined rather than calling ~/Research/Knowledge/AI/githooks/nfc.jl, for the same
+# reason stages 1 and 3 inline theirs: a hook that skips itself because a path outside the
+# repository is missing reports "clean" when it checked nothing. Use `nfc.jl --apply` to fix what
+# this reports.
+if ! nfc_out=$(julia --startup-file=no -e '
+        using Unicode
+        bad = filter(ARGS) do f
+            s = read(f, String)
+            isvalid(s) && s != Unicode.normalize(s, :NFC)
+        end
+        isempty(bad) || println(join(bad, "\n"))
+        exit(isempty(bad) ? 0 : 1)
+    ' "${staged[@]}" 2>&1); then
+    n=$(printf '%s\n' "$nfc_out" | grep -c . || true)
+    printf '%sunicode: %s file(s) not NFC%s\n' "$red" "$n" "$nc"
+    printf '%s\n' "$nfc_out" | sed 's/^/    /'
+    printf '    %sfix: julia --startup-file=no ~/Research/Knowledge/AI/githooks/nfc.jl --apply <files>%s\n' \
+           "$dim" "$nc"
+    status=1
+else
+    printf '%sunicode: NFC%s\n' "$green" "$nc"
 fi
 
 # ---------------------------------------------------------------- 3. load test (blocking)
 # Only for an actual package: an experiment repository has a Project.toml without a name.
 pkg=$(sed -n 's/^name[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' Project.toml 2>/dev/null | head -1)
+
+# The output is captured from the one run, not produced by a second one. It is also filtered
+# rather than tailed: for the failure this stage exists to catch, the cause — `ERROR: LoadError`
+# and the file:line — is at the TOP, and `tail -20` kept backtrace frames 15-18 and the
+# "Failed to precompile" summary while discarding it. Measured 2026-09-05: every session that
+# hit this had to re-run Julia by hand to learn why. Dropping the ` [n] frame` and `  @ Module`
+# lines is what those sessions did; it leaves the message and its location in the first lines.
 if [ -n "$pkg" ]; then
-    if julia --startup-file=no --project=. -e "using $pkg" >/dev/null 2>&1; then
+    if load_out=$(julia --startup-file=no --project=. -e "using $pkg" 2>&1); then
         printf '%sloads: ok%s\n' "$green" "$nc"
     else
         printf '%sloads: FAILED%s — `using %s` errors:\n' "$red" "$nc" "$pkg"
-        julia --startup-file=no --project=. -e "using $pkg" 2>&1 | tail -20 | sed 's/^/    /'
+        printf '%s\n' "$load_out" \
+            | grep -vE '^[[:space:]]*\[[0-9]+\][[:space:]]|^[[:space:]]*@ ' \
+            | head -20 | sed 's/^/    /'
         status=1
     fi
 fi
