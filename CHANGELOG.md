@@ -21,6 +21,8 @@ written.
 
 ### Breaking Changes
 
+- `AutoEncoderModel` is no longer exported. This struct was a placeholder stub with no implemented behaviour; use `GeometricMachineLearning.AutoEncoder` instead.
+
 ### Changed
 
 - `src/data_loader/data_loader.jl` is now Unicode NFC-normalised. It stored `ṗ` as a base letter
@@ -30,5 +32,7 @@ written.
   function signatures — but a `grep` pattern or an editor search typed in NFC now matches, where
   before it silently matched nothing. The file is byte-equal to the NFC normalisation of its
   predecessor; no string literal was affected, and no changed line falls inside a doctest block.
+
+- Six stub/marker struct files have been removed: `src/Models/AutoEncoder.jl`, `src/Models/OperatorInference.jl`, `src/TrainingProblem.jl`, and three marker struct files in `src/TrainingData/` (`GenericData.jl`, `PostProcessingData.jl`, `VlasovData.jl`). These were never called from this package or its downstream consumer (ReducedBasisMethods), and their includes and exports (except `AutoEncoderModel`, noted separately as a breaking change) have been pruned from the module files. Establishing that exported names are live, not provisional placeholders, unblocks later refactoring.
 
 ## Open Issues
