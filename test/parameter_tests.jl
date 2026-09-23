@@ -81,12 +81,9 @@ end
           sprint(show, p.samples)
 end
 
-using HDF5: h5open
-
 @testset "read_parameters from a file path" begin
     params = (a = 1.0, b = 2)
-    h5open(h5file, "w") do _
-    end
+    @test !isfile(h5file)
     ReducedComplexityModeling.save_parameters(h5file, params)
     @test ReducedComplexityModeling.read_parameters(h5file) == params
     rm(h5file)

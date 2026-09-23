@@ -39,6 +39,10 @@ written.
 - `read_parameters(fpath)` passed the group path as a keyword argument, but the underlying
   method takes it positionally. This always threw a `MethodError`. The call site is corrected.
 
+- `save_parameters(fpath, params)` opened files with `"r+"`, so it failed on a path that
+  did not exist yet. It now opens with `"cw"`, which creates a missing file and keeps the
+  contents of an existing one.
+
 - `h5save(h5, ::Parameter)` now correctly handles Parameters without samples. Previously, a
   Parameter with `samples === nothing` was written as an HDF5 dataset, which threw the error
   "size must be positive". Now no `samples` dataset is written, and `Parameter(h5, path)` or
