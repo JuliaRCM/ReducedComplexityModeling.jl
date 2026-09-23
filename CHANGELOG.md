@@ -21,7 +21,7 @@ written.
 
 ### Breaking Changes
 
-- `AutoEncoderModel` is no longer exported. This struct was a placeholder stub with no implemented behaviour; use `GeometricMachineLearning.AutoEncoder` instead.
+- `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
 
 ### Changed
 
@@ -33,6 +33,12 @@ written.
   before it silently matched nothing. The file is byte-equal to the NFC normalisation of its
   predecessor; no string literal was affected, and no changed line falls inside a doctest block.
 
-- Six stub/marker struct files have been removed: `src/Models/AutoEncoder.jl`, `src/Models/OperatorInference.jl`, `src/TrainingProblem.jl`, and three marker struct files in `src/TrainingData/` (`GenericData.jl`, `PostProcessingData.jl`, `VlasovData.jl`). These were never called from this package or its downstream consumer (ReducedBasisMethods), and their includes and exports (except `AutoEncoderModel`, noted separately as a breaking change) have been pruned from the module files. Establishing that exported names are live, not provisional placeholders, unblocks later refactoring.
+- Internal stub types have been removed: `TrainingProblem` and marker data types (`GenericData`,
+  `VectorFieldData`, `TrajectoryData`, `InputOutputData`, `ProjectionData`, `AutoEncoderData`,
+  `VlasovParticleMethodData`, `VlasovVariationalIntegratorData`), plus `learn(::TrainingProblem)`.
+  None of these had any behaviour — the marker types are empty structs, and `TrainingProblem`'s
+  constructor and `learn` have empty bodies. All were internal (not exported; reachable only as
+  `ReducedComplexityModeling.TrainingProblem` etc.). Neither this package nor ReducedBasisMethods
+  uses any of them.
 
 ## Open Issues
