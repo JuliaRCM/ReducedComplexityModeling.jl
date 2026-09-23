@@ -37,8 +37,9 @@ written.
 
 - `ParameterSpace` and `NamedTuple(::Parameter...)` now accept parameters with different element
   types, e.g. a `Float64` and a `Float32` parameter together. Previously this threw a
-  `MethodError`. `CartesianParameterSampler` on mixed element types now returns columns with their
-  parameter's element type instead of converting all to `Vector{AbstractFloat}`.
+  `MethodError`. `CartesianParameterSampler` on mixed element types now returns each column with
+  its parameter's element type. Before, every column had the common supertype, e.g.
+  `AbstractFloat` for `Float64` and `Float32`, or `Real` for `Float64` and `Int`.
 
 - The two `Batch` examples in the docstrings of `Batch` and `number_of_batches` show the batches
   that Julia 1.13 draws from the seeded `Random.shuffle` stream. The old expected output did not
@@ -71,8 +72,8 @@ written.
 
 - The sampler interface changes: `sample(sampler, parameters::NamedTuple)` is now the primitive
   and infers a concrete `Table` (column names are type-level keys). `sample(sampler, p1, p2, …)`
-  returns the same `Table` as before, but does not infer, because it builds the names at run
-  time. A sampler now implements `_columns(sampler, parameters::Tuple)`, returning
+  still works, but does not infer, because it builds the names at run time. For parameters of
+  one element type it returns the same `Table` as before. A sampler now implements `_columns(sampler, parameters::Tuple)`, returning
   one sample vector per parameter, instead of a `sample(::MySampler, ::Vararg{Parameter})` method.
   The keys of the NamedTuple must equal the parameter names, else an `AssertionError` is raised.
 
