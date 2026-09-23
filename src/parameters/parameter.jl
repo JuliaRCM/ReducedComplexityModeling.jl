@@ -52,7 +52,7 @@ function Base.:(==)(p1::Parameter, p2::Parameter)
         && p1.samples == p2.samples)
 end
 
-function show(io::IO, p::Parameter)
+function Base.show(io::IO, ::MIME"text/plain", p::Parameter)
     println(io, "Parameter $(p.name) with ")
     println(io, "   minimum = ", p.minimum)
     println(io, "   maximum = ", p.maximum)
@@ -94,7 +94,7 @@ function Parameter(h5::H5DataStore, path::AbstractString = "/")
 
     minimum = read(g["minimum"])
     maximum = read(g["maximum"])
-    samples = read(g["samples"])
+    samples = haskey(g, "samples") ? read(g["samples"]) : nothing
 
     Parameter(name, minimum, maximum, samples)
 end
@@ -103,7 +103,8 @@ function h5save(h5::H5DataStore, param::Parameter; path::AbstractString = string
     g = _create_group(h5, path)
     g["minimum"] = param.minimum
     g["maximum"] = param.maximum
-    g["samples"] = param.samples
+    # a parameter without samples stores no `samples` dataset, as HDF5 cannot write `nothing`
+    isnothing(param.samples) || (g["samples"] = param.samples)
 end
 
 function h5load(::Type{Parameter}, h5::H5DataStore; path::AbstractString = "/")

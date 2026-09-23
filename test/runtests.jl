@@ -6,6 +6,7 @@ using SafeTestsets
 include("GeometricData.jl")
 include("Models.jl")
 include("parameter_tests.jl")
+include("parametersampler_tests.jl")
 include("parameterspace_tests.jl")
 
 @safetestset "Test mnist_utils.                                                               " begin

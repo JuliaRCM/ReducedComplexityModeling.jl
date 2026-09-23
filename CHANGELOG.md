@@ -17,12 +17,42 @@ written.
 
 ### New Features
 
+- Two new parameter samplers for use with `ParameterSpace`. `RandomParameterSampler(n, rng =
+  Random.default_rng())` draws uniform samples from each parameter's `[minimum, maximum]`
+  interval; with a seeded `rng`, the sequence is reproducible.
+  `QuasiRandomParameterSampler(n)` generates the first `n` points of a Halton sequence (the
+  `j`-th parameter uses the `j`-th prime as its base, starting from index 1), scaled to the
+  parameter box. Both subtype `ParameterSampler`, ignore any stored samples, and work with
+  `sample` and the `ParameterSpace(sampler, params...)` constructor.
+
 ### Bug Fixes
 
 - The two `Batch` examples in the docstrings of `Batch` and `number_of_batches` show the batches
   that Julia 1.13 draws from the seeded `Random.shuffle` stream. The old expected output did not
   match that stream, so the required doctest check failed on 1.13. The batch counts and sizes are
   unchanged; only the order of the indices differs. The package code is unchanged.
+
+- `show(io, ::Parameter)` defined a module-local `show` method that never dispatched to
+  `Base.show`, so parameters displayed with their structural form instead of the formatted
+  output. It is now `Base.show(io, ::MIME"text/plain", ::Parameter)`.
+
+- `read_parameters(fpath)` passed the group path as a keyword argument, but the underlying
+  method takes it positionally. This always threw a `MethodError`. The call site is corrected.
+
+- `save_parameters(fpath, params)` opened files with `"r+"`, so it failed on a path that
+  did not exist yet. It now opens with `"cw"`, which creates a missing file and keeps the
+  contents of an existing one.
+
+- `h5save(h5, ::Parameter)` now correctly handles Parameters without samples. Previously, a
+  Parameter with `samples === nothing` was written as an HDF5 dataset, which threw the error
+  "size must be positive". Now no `samples` dataset is written, and `Parameter(h5, path)` or
+  `h5load(Parameter, …)` reads a missing `samples` dataset as `nothing`, so the round trip
+  works correctly. This was essential for saving a `ParameterSpace` built from samplers like
+  `RandomParameterSampler` and `QuasiRandomParameterSampler`, which ignore pre-stored samples.
+
+- The export `read_sampling_parameters`, which named no definition, has been removed. Since it
+  was never defined, accessing it always threw `UndefVarError`; this removal is cleanup rather
+  than a breaking change.
 
 ### Breaking Changes
 

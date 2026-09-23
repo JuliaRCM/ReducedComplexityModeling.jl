@@ -42,6 +42,7 @@ export Parameter, hassamples
 include("parameters/parametersampler.jl")
 
 export ParameterSampler, CartesianParameterSampler, sample
+export RandomParameterSampler, QuasiRandomParameterSampler
 
 include("parameters/parameterspace.jl")
 
@@ -49,6 +50,6 @@ export ParameterSpace
 
 include("parameters/h5routines.jl")
 
-export h5save, h5load, read_sampling_parameters
+export h5save, h5load
 
 end

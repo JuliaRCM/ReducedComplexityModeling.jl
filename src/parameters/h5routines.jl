@@ -25,7 +25,7 @@ function save_parameters(h5::H5DataStore, params::NamedTuple; path::AbstractStri
 end
 
 function save_parameters(fpath::AbstractString, params::NamedTuple)
-    h5open(fpath, "r+") do file
+    h5open(fpath, "cw") do file
         save_parameters(file, params; path = "parameters")
     end
 end
@@ -44,7 +44,7 @@ end
 
 function read_parameters(fpath::AbstractString)
     h5open(fpath, "r") do file
-        read_parameters(file; path = "parameters")
+        read_parameters(file, "parameters")
     end
 end
 
