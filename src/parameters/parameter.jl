@@ -83,7 +83,7 @@ hassamples(p::ParameterWithoutSamples) = false
 @inline Base.@propagate_inbounds Base.getindex(
     p::ParameterWithoutSamples, ::Colon) = error("Parameter $(p.name) has no samples.")
 
-function Base.NamedTuple(parameters::Vararg{Parameter{DT}}) where {DT}
+function Base.NamedTuple(parameters::Vararg{Parameter})
     names = Tuple(p.name for p in parameters)
     NamedTuple{names}(parameters)
 end

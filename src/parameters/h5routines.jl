@@ -4,11 +4,12 @@ function _name(h5::H5DataStore)
     name = name[(findlast(isequal('/'), name) + 1):end]
 end
 
+# a new group tracks the creation order of its links, so `keys` returns them in the order written
 function _create_group(h5::H5DataStore, name)
     if haskey(h5, name)
         g = h5[name]
     else
-        g = create_group(h5, name)
+        g = create_group(h5, name; track_order = true)
     end
     return g
 end

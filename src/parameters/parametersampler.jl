@@ -4,10 +4,24 @@
 abstract type ParameterSampler end
 
 """
+    sample(sampler, parameters::NamedTuple)
+    sample(sampler, parameters::Parameter...)
 
+Draws samples of `parameters` with `sampler` and returns them as a `Table` with one column per
+parameter. The column names are the keys of `parameters`, which must equal the parameter names.
+They are part of the type of a `NamedTuple`, so the first form infers a concrete `Table`. The
+second form builds the `NamedTuple` from the parameter names at run time and does not infer.
+
+A sampler implements `_columns(sampler, parameters::Tuple)`, which returns one sample vector per
+parameter.
 """
 function sample(ps::ParameterSampler, parameters::NamedTuple)
-    sample(ps, values(parameters)...)
+    @assert keys(parameters) == map(p -> p.name, values(parameters))
+    Table(NamedTuple{keys(parameters)}(_columns(ps, values(parameters))))
+end
+
+function sample(ps::ParameterSampler, parameters::Vararg{Parameter})
+    sample(ps, NamedTuple(parameters...))
 end
 
 """
@@ -15,31 +29,20 @@ end
 """
 struct CartesianParameterSampler <: ParameterSampler end
 
-function sample(::CartesianParameterSampler, parameters::Vararg{Parameter, N}) where {N}
+function _columns(::CartesianParameterSampler, parameters::NTuple{N, Parameter}) where {N}
     # make sure all parameters have a sample vector
     for p in parameters
         @assert hassamples(p)
     end
 
-    # get all parameter index combinations
-    inds = CartesianIndices(zeros([length(p) for p in parameters]...))[:]
+    # all parameter index combinations
+    inds = vec(CartesianIndices(map(length, parameters)))
 
-    # generate sample matrix
-    smps = [parameters[i].samples[inds[j][i]] for j in eachindex(inds), i in 1:N]
-
-    sinds = Tuple(p.name for p in parameters)
-    svals = Tuple(smps[:, j] for j in axes(smps, 2))
-
-    Table(; NamedTuple{sinds}(svals)...)
+    map((p, i) -> [p.samples[I[i]] for I in inds], parameters, ntuple(identity, Val(N)))
 end
 
 # map `u ∈ [0,1]` onto the interval `[minimum(p), maximum(p)]` of parameter `p`
 _scale(p::Parameter, u) = p.minimum + (p.maximum - p.minimum) * u
-
-# build the sample table from one vector of samples per parameter
-function _sample_table(parameters::Tuple{Vararg{Parameter}}, columns::Tuple)
-    Table(NamedTuple{Tuple(p.name for p in parameters)}(columns))
-end
 
 """
     RandomParameterSampler(n, rng = Random.default_rng())
@@ -63,12 +66,11 @@ struct RandomParameterSampler{RNG <: Random.AbstractRNG} <: ParameterSampler
     end
 end
 
-function sample(ps::RandomParameterSampler, parameters::Vararg{Parameter, N}) where {N}
-    columns = map(parameters) do p
+function _columns(ps::RandomParameterSampler, parameters::Tuple{Vararg{Parameter}})
+    map(parameters) do p
         u = rand(ps.rng, float(typeof(p.minimum)), ps.n)
         u .= _scale.(Ref(p), u)
     end
-    _sample_table(parameters, columns)
 end
 
 # the first `n` prime numbers
@@ -115,10 +117,10 @@ struct QuasiRandomParameterSampler <: ParameterSampler
     end
 end
 
-function sample(ps::QuasiRandomParameterSampler, parameters::Vararg{Parameter, N}) where {N}
+function _columns(
+        ps::QuasiRandomParameterSampler, parameters::NTuple{N, Parameter}) where {N}
     bases = _primes(N)
-    columns = map(parameters, ntuple(j -> bases[j], Val(N))) do p, b
+    map(parameters, ntuple(j -> bases[j], Val(N))) do p, b
         _scale.(Ref(p), _radical_inverse.(float(typeof(p.minimum)), 1:(ps.n), b))
     end
-    _sample_table(parameters, columns)
 end

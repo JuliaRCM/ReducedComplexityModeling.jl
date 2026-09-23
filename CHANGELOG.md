@@ -25,7 +25,21 @@ written.
   parameter box. Both subtype `ParameterSampler`, ignore any stored samples, and work with
   `sample` and the `ParameterSpace(sampler, params...)` constructor.
 
+- HDF5 groups created by `save_parameters`, `h5save(::Parameter)`, and `h5save(::ParameterSpace)`
+  now track link creation order, so keys are preserved in the order written. Previously, keys were
+  reordered alphabetically when read back. A file written before this change reads with keys in
+  alphabetical order. A group that exists before the write and does not track creation order,
+  such as the file root in `save_parameters(h5, params; path = "/")`, keeps the alphabetical
+  order. The `HDF5` compat bound rises to `0.16.11, 0.17`, because 0.16.11 is the first HDF5.jl
+  release where `keys(group)` returns a group's creation order.
+
 ### Bug Fixes
+
+- `ParameterSpace` and `NamedTuple(::Parameter...)` now accept parameters with different element
+  types, e.g. a `Float64` and a `Float32` parameter together. Previously this threw a
+  `MethodError`. `CartesianParameterSampler` on mixed element types now returns each column with
+  its parameter's element type. Before, every column had the common supertype, e.g.
+  `AbstractFloat` for `Float64` and `Float32`, or `Real` for `Float64` and `Int`.
 
 - The two `Batch` examples in the docstrings of `Batch` and `number_of_batches` show the batches
   that Julia 1.13 draws from the seeded `Random.shuffle` stream. The old expected output did not
@@ -55,6 +69,14 @@ written.
   than a breaking change.
 
 ### Breaking Changes
+
+- The sampler interface changes: `sample(sampler, parameters::NamedTuple)` is now the primitive
+  and infers a concrete `Table` (column names are type-level keys). `sample(sampler, p1, p2, …)`
+  still works, but does not infer, because it builds the names at run time. For parameters of
+  one element type it returns the same `Table` as before. A sampler now implements
+  `_columns(sampler, parameters::Tuple)`, returning one sample vector per parameter, instead of
+  a `sample(::MySampler, ::Vararg{Parameter})` method. The keys of the NamedTuple must equal
+  the parameter names, else an `AssertionError` is raised.
 
 - `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
 

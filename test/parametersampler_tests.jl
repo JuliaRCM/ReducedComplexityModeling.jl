@@ -54,6 +54,19 @@ end
     @test QuasiRandomParameterSampler(Int32(3)).n === 3
 end
 
+@testset "sample infers a concrete Table" begin
+    params = (μ = Parameter(:μ, 0.0, 1.0, 3), σ = Parameter(:σ, 0.0f0, 4.0f0, 2))
+
+    @testset "$(nameof(typeof(sampler)))" for sampler in (CartesianParameterSampler(),
+        RandomParameterSampler(4, Xoshiro(1)), QuasiRandomParameterSampler(4))
+        s = @inferred sample(sampler, params)
+        @test propertynames(s) == (:μ, :σ)
+    end
+
+    # the keys of the `NamedTuple` name the columns, so they must match the parameter names
+    @test_throws AssertionError sample(CartesianParameterSampler(), (a = params.μ,))
+end
+
 @testset "h5save and h5load of a randomly sampled ParameterSpace" begin
     h5file = "temp.h5"
     ps = ParameterSpace(RandomParameterSampler(4, Xoshiro(1)),
