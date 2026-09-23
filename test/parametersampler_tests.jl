@@ -28,6 +28,8 @@ using Random: Xoshiro
     @test size(ps1) == (10, 2)
 
     @test_throws AssertionError RandomParameterSampler(0)
+    @test RandomParameterSampler(Int32(3), Xoshiro(1)).n === 3
+    @test_throws MethodError RandomParameterSampler(3, 1)
 end
 
 @testset "QuasiRandomParameterSampler" begin
@@ -49,4 +51,15 @@ end
     @test ps[1] == (μ = 1 / 2, ν = 1 / 3)
 
     @test_throws AssertionError QuasiRandomParameterSampler(0)
+    @test QuasiRandomParameterSampler(Int32(3)).n === 3
+end
+
+@testset "h5save and h5load of a randomly sampled ParameterSpace" begin
+    h5file = "temp.h5"
+    ps = ParameterSpace(RandomParameterSampler(4, Xoshiro(1)),
+        Parameter(:μ, 0.0, 1.0), Parameter(:ν, 0.0, 2.0))
+
+    h5save(h5file, ps)
+    @test h5load(ParameterSpace, h5file) == ps
+    rm(h5file)
 end

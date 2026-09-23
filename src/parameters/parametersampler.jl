@@ -38,14 +38,15 @@ _scale(p::Parameter, u) = p.minimum + (p.maximum - p.minimum) * u
 
 # build the sample table from one vector of samples per parameter
 function _sample_table(parameters::Tuple{Vararg{Parameter}}, columns::Tuple)
-    Table(; NamedTuple{Tuple(p.name for p in parameters)}(columns)...)
+    Table(NamedTuple{Tuple(p.name for p in parameters)}(columns))
 end
 
 """
     RandomParameterSampler(n, rng = Random.default_rng())
 
 Draws `n` points uniformly at random from the box spanned by the `minimum` and `maximum` of
-each parameter. The samples stored in a `Parameter` are ignored.
+each parameter. The samples stored in a `Parameter` are ignored. The samples of a parameter
+with element type `DT` have type `float(DT)`, so an integer parameter gets `Float64` samples.
 
 The draws come from `rng`, parameter by parameter in the order the parameters are passed, so a
 sampler built with a seeded generator, e.g. `RandomParameterSampler(n, Random.Xoshiro(42))`,
@@ -55,7 +56,8 @@ struct RandomParameterSampler{RNG <: Random.AbstractRNG} <: ParameterSampler
     n::Int
     rng::RNG
 
-    function RandomParameterSampler(n::Int, rng::RNG = Random.default_rng()) where {RNG}
+    function RandomParameterSampler(
+            n::Integer, rng::RNG = Random.default_rng()) where {RNG <: Random.AbstractRNG}
         @assert n > 0
         new{RNG}(n, rng)
     end
@@ -98,7 +100,8 @@ end
 Draws the first `n` points of the Halton sequence, scaled to the box spanned by the `minimum`
 and `maximum` of each parameter. The `j`-th parameter uses the `j`-th prime as its base, and
 the sequence starts at index one, so the corner `minimum` is not a sample. The samples stored
-in a `Parameter` are ignored.
+in a `Parameter` are ignored. The samples of a parameter with element type `DT` have type
+`float(DT)`, so an integer parameter gets `Float64` samples.
 
 The points are deterministic and fill the box more evenly than random draws. The Halton
 sequence degrades for many parameters, as the bases grow and neighbouring dimensions correlate.
@@ -106,7 +109,7 @@ sequence degrades for many parameters, as the bases grow and neighbouring dimens
 struct QuasiRandomParameterSampler <: ParameterSampler
     n::Int
 
-    function QuasiRandomParameterSampler(n::Int)
+    function QuasiRandomParameterSampler(n::Integer)
         @assert n > 0
         new(n)
     end

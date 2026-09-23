@@ -39,11 +39,20 @@ written.
 - `read_parameters(fpath)` passed the group path as a keyword argument, but the underlying
   method takes it positionally. This always threw a `MethodError`. The call site is corrected.
 
+- `h5save(h5, ::Parameter)` now correctly handles Parameters without samples. Previously, a
+  Parameter with `samples === nothing` was written as an HDF5 dataset, which threw the error
+  "size must be positive". Now no `samples` dataset is written, and `Parameter(h5, path)` or
+  `h5load(Parameter, …)` reads a missing `samples` dataset as `nothing`, so the round trip
+  works correctly. This was essential for saving a `ParameterSpace` built from samplers like
+  `RandomParameterSampler` and `QuasiRandomParameterSampler`, which ignore pre-stored samples.
+
+- The export `read_sampling_parameters`, which named no definition, has been removed. Since it
+  was never defined, accessing it always threw `UndefVarError`; this removal is cleanup rather
+  than a breaking change.
+
 ### Breaking Changes
 
 - `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
-
-- The export `read_sampling_parameters` named no definition and has been removed.
 
 ### Changed
 
