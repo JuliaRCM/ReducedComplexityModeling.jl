@@ -30,8 +30,8 @@ written.
   reordered alphabetically when read back. A file written before this change reads with keys in
   alphabetical order. A group that exists before the write and does not track creation order,
   such as the file root in `save_parameters(h5, params; path = "/")`, keeps the alphabetical
-  order. The `HDF5` compat bound rises to `0.16.3, 0.17`, because 0.16.3 is the first HDF5.jl
-  release that reads a group in creation order.
+  order. The `HDF5` compat bound rises to `0.16.11, 0.17`, because 0.16.11 is the first HDF5.jl
+  release where `keys(group)` returns a group's creation order.
 
 ### Bug Fixes
 
@@ -73,9 +73,10 @@ written.
 - The sampler interface changes: `sample(sampler, parameters::NamedTuple)` is now the primitive
   and infers a concrete `Table` (column names are type-level keys). `sample(sampler, p1, p2, …)`
   still works, but does not infer, because it builds the names at run time. For parameters of
-  one element type it returns the same `Table` as before. A sampler now implements `_columns(sampler, parameters::Tuple)`, returning
-  one sample vector per parameter, instead of a `sample(::MySampler, ::Vararg{Parameter})` method.
-  The keys of the NamedTuple must equal the parameter names, else an `AssertionError` is raised.
+  one element type it returns the same `Table` as before. A sampler now implements
+  `_columns(sampler, parameters::Tuple)`, returning one sample vector per parameter, instead of
+  a `sample(::MySampler, ::Vararg{Parameter})` method. The keys of the NamedTuple must equal
+  the parameter names, else an `AssertionError` is raised.
 
 - `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
 

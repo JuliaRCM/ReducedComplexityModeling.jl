@@ -60,7 +60,6 @@ end
     @testset "$(nameof(typeof(sampler)))" for sampler in (CartesianParameterSampler(),
         RandomParameterSampler(4, Xoshiro(1)), QuasiRandomParameterSampler(4))
         s = @inferred sample(sampler, params)
-        @test isconcretetype(typeof(s))
         @test propertynames(s) == (:μ, :σ)
     end
 
