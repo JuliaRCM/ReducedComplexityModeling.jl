@@ -19,6 +19,11 @@ written.
 
 ### Bug Fixes
 
+- The two `Batch` examples in the docstrings of `Batch` and `number_of_batches` show the batches
+  that Julia 1.13 draws from the seeded `Random.shuffle` stream. The old expected output did not
+  match that stream, so the required doctest check failed on 1.13. The batch counts and sizes are
+  unchanged; only the order of the indices differs. The package code is unchanged.
+
 ### Breaking Changes
 
 - `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
