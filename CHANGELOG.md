@@ -26,6 +26,8 @@ written.
 
 ### Breaking Changes
 
+- `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
+
 ### Changed
 
 - `src/data_loader/data_loader.jl` is now Unicode NFC-normalised. It stored `ṗ` as a base letter
@@ -35,5 +37,13 @@ written.
   function signatures — but a `grep` pattern or an editor search typed in NFC now matches, where
   before it silently matched nothing. The file is byte-equal to the NFC normalisation of its
   predecessor; no string literal was affected, and no changed line falls inside a doctest block.
+
+- Internal stub types have been removed: `TrainingProblem` and marker data types (`GenericData`,
+  `VectorFieldData`, `TrajectoryData`, `InputOutputData`, `ProjectionData`, `AutoEncoderData`,
+  `VlasovParticleMethodData`, `VlasovVariationalIntegratorData`), plus `learn(::TrainingProblem)`.
+  None of these had any behaviour — the marker types are empty structs, and `TrainingProblem`'s
+  constructor and `learn` have empty bodies. All were internal (not exported; reachable only as
+  `ReducedComplexityModeling.TrainingProblem` etc.). Neither this package nor ReducedBasisMethods
+  uses any of them.
 
 ## Open Issues
