@@ -1,3 +1,4 @@
+using Random: Xoshiro
 
 grid = [0.0 1.0 0.0
         0.5 1.0 0.0
@@ -37,4 +38,25 @@ h5file = "temp.h5"
     p2 = h5load(ParameterSpace, h5file)
     rm(h5file)
     @test p1 == p2
+end
+
+@testset "h5save and h5load keep the parameter order" begin
+    ps = ParameterSpace(Parameter(:ν, 0.0, 1.0, 2), Parameter(:μ, 0.0, 2.0, 3))
+
+    h5save(h5file, ps; mode = "w")
+    @test h5load(ParameterSpace, h5file) == ps
+    rm(h5file)
+end
+
+@testset "ParameterSpace with mixed element types" begin
+    μ = Parameter(:μ, 0.0, 1.0, 3)
+    σ = Parameter(:σ, 0.0f0, 4.0f0, 2)
+
+    @testset "$(nameof(typeof(sampler)))" for sampler in (CartesianParameterSampler(),
+        RandomParameterSampler(4, Xoshiro(1)), QuasiRandomParameterSampler(4))
+        ps = ParameterSpace(sampler, μ, σ)
+        @test ps.parameters == (μ = μ, σ = σ)
+        @test eltype(ps.samples.μ) == Float64
+        @test eltype(ps.samples.σ) == Float32
+    end
 end

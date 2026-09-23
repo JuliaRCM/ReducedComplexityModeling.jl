@@ -89,6 +89,24 @@ end
     rm(h5file)
 end
 
+@testset "read_parameters keeps the key order" begin
+    params = (b = 2, a = 1.0)
+    ReducedComplexityModeling.save_parameters(h5file, params)
+    @test ReducedComplexityModeling.read_parameters(h5file) == params
+    rm(h5file)
+end
+
+@testset "read_parameters reads a group without creation order" begin
+    # a group created without `track_order` lists its keys alphabetically
+    ReducedComplexityModeling.HDF5.h5open(h5file, "w") do file
+        g = ReducedComplexityModeling.HDF5.create_group(file, "parameters")
+        g["b"] = 2
+        g["a"] = 1.0
+    end
+    @test ReducedComplexityModeling.read_parameters(h5file) == (a = 1.0, b = 2)
+    rm(h5file)
+end
+
 @testset "Every exported name is defined" begin
     @test isempty(filter(
         n -> !isdefined(ReducedComplexityModeling, n), names(ReducedComplexityModeling)))
