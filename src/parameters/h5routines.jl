@@ -44,7 +44,7 @@ end
 
 function read_parameters(fpath::AbstractString)
     h5open(fpath, "r") do file
-        read_parameters(file; path = "parameters")
+        read_parameters(file, "parameters")
     end
 end
 

@@ -17,6 +17,14 @@ written.
 
 ### New Features
 
+- Two new parameter samplers for use with `ParameterSpace`. `RandomParameterSampler(n, rng =
+  Random.default_rng())` draws uniform samples from each parameter's `[minimum, maximum]`
+  interval; with a seeded `rng`, the sequence is reproducible.
+  `QuasiRandomParameterSampler(n)` generates the first `n` points of a Halton sequence (the
+  `j`-th parameter uses the `j`-th prime as its base, starting from index 1), scaled to the
+  parameter box. Both subtype `ParameterSampler`, ignore any stored samples, and work with
+  `sample` and the `ParameterSpace(sampler, params...)` constructor.
+
 ### Bug Fixes
 
 - The two `Batch` examples in the docstrings of `Batch` and `number_of_batches` show the batches
@@ -24,9 +32,18 @@ written.
   match that stream, so the required doctest check failed on 1.13. The batch counts and sizes are
   unchanged; only the order of the indices differs. The package code is unchanged.
 
+- `show(io, ::Parameter)` defined a module-local `show` method that never dispatched to
+  `Base.show`, so parameters displayed with their structural form instead of the formatted
+  output. It is now `Base.show(io, ::MIME"text/plain", ::Parameter)`.
+
+- `read_parameters(fpath)` passed the group path as a keyword argument, but the underlying
+  method takes it positionally. This always threw a `MethodError`. The call site is corrected.
+
 ### Breaking Changes
 
 - `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
+
+- The export `read_sampling_parameters` named no definition and has been removed.
 
 ### Changed
 

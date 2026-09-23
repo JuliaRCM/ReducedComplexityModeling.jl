@@ -73,3 +73,26 @@ h5file = "temp.h5"
     rm(h5file)
     @test p1 == p2
 end
+
+@testset "Parameter show" begin
+    p = Parameter(:μ, 0.0, 1.0, 3)
+    @test sprint(show, MIME"text/plain"(), p) ==
+          "Parameter μ with \n   minimum = 0.0\n   maximum = 1.0\n   samples = \n" *
+          sprint(show, p.samples)
+end
+
+using HDF5: h5open
+
+@testset "read_parameters from a file path" begin
+    params = (a = 1.0, b = 2)
+    h5open(h5file, "w") do _
+    end
+    ReducedComplexityModeling.save_parameters(h5file, params)
+    @test ReducedComplexityModeling.read_parameters(h5file) == params
+    rm(h5file)
+end
+
+@testset "Every exported name is defined" begin
+    @test isempty(filter(
+        n -> !isdefined(ReducedComplexityModeling, n), names(ReducedComplexityModeling)))
+end

@@ -52,7 +52,7 @@ function Base.:(==)(p1::Parameter, p2::Parameter)
         && p1.samples == p2.samples)
 end
 
-function show(io::IO, p::Parameter)
+function Base.show(io::IO, ::MIME"text/plain", p::Parameter)
     println(io, "Parameter $(p.name) with ")
     println(io, "   minimum = ", p.minimum)
     println(io, "   maximum = ", p.maximum)
