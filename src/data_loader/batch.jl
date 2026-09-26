@@ -26,14 +26,20 @@ Random.seed!(rng, 123)
 dl = DataLoader(rand(rng, 5))
 batch = Batch(2)
 
-batch(dl)
+batches = batch(dl)
+
+println(stdout, length.(batches))
+println(stdout, sort(vcat(batches...)))
 
 # output
 
 [ Info: You have provided a matrix as input. The axes will be interpreted as (i) system dimension and (ii) number of parameters.
-([(1, 3), (1, 1)], [(1, 5), (1, 4)], [(1, 2)])
+(2, 2, 1)
+[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)]
 ```
 
+The batches are drawn at random, so the example prints their lengths and the sorted indices
+of all batches together.
 Here the first index is always 1 (the time dimension). We get a total number of 3 batches.
 The last batch is only of size 1 because we *sample without replacement*.
 Also see the docstring for [`DataLoader(::AbstractVector)`](@ref).
@@ -130,15 +136,23 @@ nob₁ = number_of_batches(dl₁, batch)
 nob₂ = number_of_batches(dl₂, batch)
 println(stdout, "Number of batches of dl₁: ", nob₁)
 println(stdout, "Number of batches of dl₂: ", nob₂)
-println(stdout, batch(dl₁), "\n", batch(dl₂))
+batches₁ = batch(dl₁)
+batches₂ = batch(dl₂)
+println(stdout, length.(batches₁), "\n", length.(batches₂))
+println(stdout, sort(vcat(batches₁...)), "\n", sort(vcat(batches₂...)))
 
 # output
 
 Number of batches of dl₁: 2
 Number of batches of dl₂: 2
-([(1, 1), (3, 1), (2, 1)], [(4, 1)])
-([(1, 5), (1, 4), (1, 1)], [(1, 3), (1, 2)])
+(3, 1)
+(3, 2)
+[(1, 1), (2, 1), (3, 1), (4, 1)]
+[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)]
 ```
+
+The batches are drawn at random, so the example prints their lengths and the sorted indices
+of all batches together.
 
 Here we see that in the *autoencoder case* that last minibatch has an additional element.
 """
