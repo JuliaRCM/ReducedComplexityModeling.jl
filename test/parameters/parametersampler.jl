@@ -1,3 +1,5 @@
+using ReducedComplexityModeling
+using Test
 using Random: Xoshiro
 
 @testset "RandomParameterSampler" begin
