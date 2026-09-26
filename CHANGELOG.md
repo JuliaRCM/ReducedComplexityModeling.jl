@@ -103,5 +103,3 @@ written.
   each batch and the sorted indices of all batches, which hold for every permutation, so the
   doctests pass on every supported Julia version. Only docstring text changes; `Batch` and its
   shuffle behave as before.
-
-## Open Issues
