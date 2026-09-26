@@ -18,12 +18,8 @@ Consider the following example for drawing batches of size 2 for an instance of 
 ```jldoctest
 using ReducedComplexityModeling
 using ReducedComplexityModeling: Batch
-import Random
 
-rng = Random.TaskLocalRNG()
-Random.seed!(rng, 123)
-
-dl = DataLoader(rand(rng, 5))
+dl = DataLoader(rand(5))
 batch = Batch(2)
 
 batches = batch(dl)
@@ -40,6 +36,7 @@ println(stdout, sort(vcat(batches...)))
 
 The batches are drawn at random, so the example prints their lengths and the sorted indices
 of all batches together.
+
 Here the first index is always 1 (the time dimension). We get a total number of 3 batches.
 The last batch is only of size 1 because we *sample without replacement*.
 Also see the docstring for [`DataLoader(::AbstractVector)`](@ref).
@@ -123,9 +120,6 @@ Here the distinction is between data that are *time-series like* and data that a
 using ReducedComplexityModeling
 using ReducedComplexityModeling: number_of_batches
 using ReducedComplexityModeling: Batch
-import Random
-
-Random.seed!(123)
 
 dat = [1, 2, 3, 4, 5]
 dl₁ = DataLoader(dat; autoencoder = false, suppress_info = true) # time series-like
