@@ -113,5 +113,3 @@ written.
   requires. The POD pipeline script that had no `@test` still runs, as
   `test/integration/pod_lorenz.jl`, and `test/helpers/problems.jl` holds the Lorenz problem it
   uses; the empty `test/Models.jl` is removed.
-
-## Open Issues
