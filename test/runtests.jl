@@ -1,17 +1,17 @@
-using ReducedComplexityModeling
-using Test
-using Plots
 using SafeTestsets
 
-include("GeometricData.jl")
-include("Models.jl")
-include("parameter_tests.jl")
-include("parametersampler_tests.jl")
-include("parameterspace_tests.jl")
+const GROUPS = isempty(ARGS) ? ["core", "slow"] : ARGS
 
-@safetestset "Test mnist_utils.                                                               " begin
-    include("data_loader/mnist_utils.jl")
+if "core" in GROUPS
+    @safetestset "Aqua" include("quality/aqua.jl")
+    @safetestset "Exports" include("integration/exports.jl")
+    @safetestset "Parameter" include("parameters/parameter.jl")
+    @safetestset "Parameter samplers" include("parameters/parametersampler.jl")
+    @safetestset "Parameter spaces" include("parameters/parameterspace.jl")
+    @safetestset "MNIST utilities" include("data_loader/mnist_utils.jl")
+    @safetestset "Data loader for a tensor" include("data_loader/draw_batch_for_tensor_test.jl")
+    @safetestset "POD of the Lorenz system" include("integration/pod_lorenz.jl")
 end
-@safetestset "Test data loader for a tensor (q and p data)                                    " begin
-    include("data_loader/draw_batch_for_tensor_test.jl")
+if "slow" in GROUPS
+    @safetestset "Doctests" include("quality/doctests.jl")
 end
