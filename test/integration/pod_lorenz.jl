@@ -1,4 +1,5 @@
-include("../test/Problems.jl")
+include("../helpers/problems.jl")
+using ReducedComplexityModeling
 using ReducedComplexityModeling: POD, reduce!, compose
 
 begin

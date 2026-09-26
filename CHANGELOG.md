@@ -104,4 +104,14 @@ written.
   doctests pass on every supported Julia version. Only docstring text changes; `Batch` and its
   shuffle behave as before.
 
+- The test suite follows the common test convention. The test dependencies (now including
+  AbstractNeuralNetworks, Aqua and Documenter) are in `test/Project.toml` rather than in
+  `[extras]`/`[targets]`. `Pkg.test()` runs the `core` and `slow` groups, and
+  `Pkg.test(test_args = ["core"])` runs one group; every test file runs in its own module. The
+  suite now runs `Aqua.test_all` in `core`, with its ambiguity check marked broken for issue #38,
+  and the doctests in `slow`. `Project.toml` gains the compat entry `LinearAlgebra = "1"`, which Aqua
+  requires. The POD pipeline script that had no `@test` still runs, as
+  `test/integration/pod_lorenz.jl`, and `test/helpers/problems.jl` holds the Lorenz problem it
+  uses; the empty `test/Models.jl` is removed.
+
 ## Open Issues

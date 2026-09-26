@@ -1,3 +1,5 @@
+using ReducedComplexityModeling
+using Test
 
 samples = [0.0, 1.0, 2.0, 3.0, 4.0]
 h5file = "temp.h5"
@@ -105,9 +107,4 @@ end
     end
     @test ReducedComplexityModeling.read_parameters(h5file) == (a = 1.0, b = 2)
     rm(h5file)
-end
-
-@testset "Every exported name is defined" begin
-    @test isempty(filter(
-        n -> !isdefined(ReducedComplexityModeling, n), names(ReducedComplexityModeling)))
 end

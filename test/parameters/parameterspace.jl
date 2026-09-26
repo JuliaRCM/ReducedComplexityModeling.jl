@@ -1,3 +1,5 @@
+using ReducedComplexityModeling
+using Test
 using Random: Xoshiro
 
 grid = [0.0 1.0 0.0
