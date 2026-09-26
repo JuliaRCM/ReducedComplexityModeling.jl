@@ -98,4 +98,10 @@ written.
   `ReducedComplexityModeling.TrainingProblem` etc.). Neither this package nor ReducedBasisMethods
   uses any of them.
 
+- The doctests of `Batch` and `number_of_batches` no longer print the batches of a seeded
+  shuffle, whose values differ between Julia 1.10–1.12 and 1.13. They now print the length of
+  each batch and the sorted indices of all batches, which hold for every permutation, so the
+  doctests pass on every supported Julia version. Only docstring text changes; `Batch` and its
+  shuffle behave as before.
+
 ## Open Issues
