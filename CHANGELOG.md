@@ -122,3 +122,15 @@ written.
   requires. The POD pipeline script that had no `@test` still runs, as
   `test/integration/pod_lorenz.jl`, and `test/helpers/problems.jl` holds the Lorenz problem it
   uses; the empty `test/Models.jl` is removed.
+
+- The `core` group runs JET's `report_opt` in `test/quality/jet.jl`, after Aqua. The file checks
+  each function that launches a KernelAbstractions kernel and that a test reaches —
+  `convert_input_and_batch_indices_to_array`, `onehotbatch` and `split_and_flatten` — at the
+  argument types the tests pass. It also checks the body of each kernel that the tests reach,
+  through the `cpu_<kernel>` function that `@kernel` generates, because the analysis of a
+  launcher does not report a defect in a kernel body. On a Julia version where JET does not work,
+  the file records one skipped test. JET and KernelAbstractions are added to `test/Project.toml`,
+  with no `[compat]` bound.
+
+- `test/Project.toml` no longer has `[compat]` entries for `AbstractNeuralNetworks` and `Random`.
+  Both are dependencies of the package, and the package's own `[compat]` bounds them.
