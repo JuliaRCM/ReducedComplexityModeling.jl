@@ -7,4 +7,5 @@ ReducedComplexityModeling = "abb4722c-1d8e-48eb-a3bd-45b3116bfaba"
 
 [compat]
 Documenter = "1.19.0"
+DocumenterCitations = "1.5.0"
 DocumenterInterLinks = "1.1.0"
