@@ -68,6 +68,12 @@ written.
   was never defined, accessing it always threw `UndefVarError`; this removal is cleanup rather
   than a breaking change.
 
+- The `DataLoader` constructors read the `autoencoder` keyword as a `Bool`. Before, they
+  compared it with `== false` and `== true`, so a value such as `autoencoder = nothing` or
+  `autoencoder = :yes` matched neither branch and the constructor silently returned `nothing`.
+  It now raises a `TypeError`. `DataLoader(dl::DataLoader; autoencoder = nothing)` still
+  inherits the loader's own setting. The tests of `hassamples` assert the predicate directly.
+
 ### Breaking Changes
 
 - The sampler interface changes: `sample(sampler, parameters::NamedTuple)` is now the primitive

@@ -117,10 +117,10 @@ function DataLoader(data::AbstractArray{T, 3}; autoencoder = false, suppress_inf
     end
     input_dim, input_time_steps, n_params = size(data)
 
-    if autoencoder == false
+    if !autoencoder
         DataLoader{T, typeof(data), Nothing, :TimeSeries}(
             data, nothing, input_dim, input_time_steps, n_params, nothing, nothing)
-    elseif autoencoder == true
+    elseif autoencoder
         DataLoader{T, typeof(data), Nothing, :RegularData}(
             data, nothing, input_dim, input_time_steps, n_params, nothing, nothing)
     end
@@ -144,12 +144,12 @@ function DataLoader(data::AbstractMatrix{T}; autoencoder = true, suppress_info =
         @info "You have provided a matrix as input. The axes will be interpreted as (i) system dimension and (ii) number of parameters."
     end
 
-    if autoencoder == false
+    if !autoencoder
         input_dim, time_steps = size(data)
         reshaped_data = reshape(data, input_dim, time_steps, 1)
         return DataLoader{T, typeof(reshaped_data), Nothing, :TimeSeries}(
             reshaped_data, nothing, input_dim, time_steps, 1, nothing, nothing)
-    elseif autoencoder == true
+    elseif autoencoder
         input_dim, n_params = size(data)
         reshaped_data = reshape(data, input_dim, 1, n_params)
         return DataLoader{T, typeof(reshaped_data), Nothing, :RegularData}(
@@ -247,13 +247,13 @@ function DataLoader(data::NamedTuple{(:q, :p), Tuple{AT, AT}};
         @info "You have provided a NamedTuple with keys q and p; the data are matrices. This is interpreted as *symplectic data*."
     end
 
-    if autoencoder == false
+    if !autoencoder
         dim2, time_steps = size(data.q)
         reshaped_data = (q = reshape(data.q, dim2, time_steps, 1),
             p = reshape(data.p, dim2, time_steps, 1))
         return DataLoader{T, typeof(reshaped_data), Nothing, :TimeSeries}(
             reshaped_data, nothing, dim2 * 2, time_steps, 1, nothing, nothing)
-    elseif autoencoder == true
+    elseif autoencoder
         dim2, n_params = size(data.q)
         reshaped_data = (
             q = reshape(data.q, dim2, 1, n_params), p = reshape(data.p, dim2, 1, n_params))
@@ -271,10 +271,10 @@ function DataLoader(data::NamedTuple{(:q, :p), Tuple{AT, AT}};
 
     dim2, time_steps, n_params = size(data.q)
 
-    if autoencoder == false
+    if !autoencoder
         DataLoader{T, typeof(data), Nothing, :TimeSeries}(
             data, nothing, dim2 * 2, time_steps, n_params, nothing, nothing)
-    elseif autoencoder == true
+    elseif autoencoder
         DataLoader{T, typeof(data), Nothing, :RegularData}(
             data, nothing, dim2 * 2, time_steps, n_params, nothing, nothing)
     end
@@ -476,9 +476,9 @@ function DataLoader(dl::DataLoader{T1, <:QPTOAT, Nothing, Type},
 ) where {T1, Type}
     DT = if isnothing(autoencoder)
         Type
-    elseif autoencoder == true
+    elseif autoencoder
         :RegularData
-    elseif autoencoder == false
+    elseif !autoencoder
         :TimeSeries
     end
 
