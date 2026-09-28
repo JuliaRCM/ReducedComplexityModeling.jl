@@ -71,8 +71,11 @@ written.
 - The `DataLoader` constructors read the `autoencoder` keyword as a `Bool`. Before, they
   compared it with `== false` and `== true`, so a value such as `autoencoder = nothing` or
   `autoencoder = :yes` matched neither branch and the constructor silently returned `nothing`.
-  It now raises a `TypeError`. `DataLoader(dl::DataLoader; autoencoder = nothing)` still
-  inherits the loader's own setting. The tests of `hassamples` assert the predicate directly.
+  Such a value now raises an error: a `MethodError` from `!` in the data constructors, and a
+  `TypeError` in `DataLoader(dl::DataLoader; autoencoder)`. `autoencoder = 0` and
+  `autoencoder = 1` matched before, because `0 == false` and `1 == true`, and now raise the same
+  errors. `DataLoader(dl::DataLoader; autoencoder = nothing)` still inherits the loader's own
+  setting.
 
 ### Breaking Changes
 
