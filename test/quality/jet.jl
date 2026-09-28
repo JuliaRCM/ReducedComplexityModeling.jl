@@ -14,7 +14,9 @@ using Test
 # `test/quality/` passes to the launcher: `Float64` for `convert_input_and_batch_indices_to_array`
 # and `Int` for `onehotbatch`. No test calls `split_and_flatten` directly; its `Float32` line
 # follows `DataLoader(data, target)` in `test/data_loader/mnist_utils.jl`. The `Int` of its
-# doctest is in `test/quality/` and gets no line.
+# doctest is in `test/quality/` and gets no line. The `RegularArray` and `Batch{:FeedForward}`
+# line takes its argument types from the doctest of `convert_input_and_batch_indices_to_array`,
+# the only test that calls the launcher at that `DataLoader` type.
 const TimeSeriesQP = DataLoader{
     Float64, @NamedTuple{q::Array{Float64, 3}, p::Array{Float64, 3}}, Nothing, :TimeSeries}
 const RegularArray = DataLoader{Float64, Array{Float64, 3}, Nothing, :RegularData}
