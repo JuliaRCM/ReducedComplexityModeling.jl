@@ -39,10 +39,10 @@ end
         # src/data_loader/batch.jl
         @test isempty(JET.get_reports(JET.report_opt(
             convert_input_and_batch_indices_to_array,
-            (TimeSeriesQP, Batch, Indices); target_modules = RCM)))
+            (TimeSeriesQP, Batch{:Transformer}, Indices); target_modules = RCM)))
         @test isempty(JET.get_reports(JET.report_opt(
             convert_input_and_batch_indices_to_array,
-            (RegularArray, Batch, Indices); target_modules = RCM)))
+            (RegularArray, Batch{:FeedForward}, Indices); target_modules = RCM)))
         a = zeros(2, 3, 4)
         qp = (q = zeros(2, 8, 4), p = zeros(2, 8, 4))
         indices = ones(Int, 2, 4)
