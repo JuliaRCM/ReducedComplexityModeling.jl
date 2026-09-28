@@ -31,3 +31,22 @@
   bodies are checked by the `cpu_<kernel>` lines, which analyse only the `NoDynamicCheck` context;
   the `DynamicCheck` variant has the same body.
 - **Found:** 2026-09-28
+
+### K3 · `test_onehotbatch` checks one column, at an index off by one
+
+- **Kind:** defect
+- **Location:** `test/data_loader/mnist_utils.jl:50`
+- **Evidence:** `zip(length(V), V)` gives the one pair `(4, 1)` for `V = [1, 2, 5, 0]`, so the loop
+  checks only column 4. `onehotbatch` maps `i` to row `i + 1`, but the test reads
+  `V_encoded[v, 1, i]` (`:52`); the check passes only because `V[4] = 0`. The fix is
+  `for (i, v) in enumerate(V)` with `V_encoded[v + 1, 1, i]`.
+- **Found:** 2026-09-28
+
+### K4 · `test_dummy_mnist` asserts nothing
+
+- **Kind:** missing test
+- **Location:** `test/data_loader/mnist_utils.jl:71`
+- **Evidence:** the function builds a `DataLoader` and ends with `@warn "缺少test"`; it has no
+  `@test`. `test/quality/jet.jl` takes the `Float32` type of its `split_and_flatten` lines from
+  this call.
+- **Found:** 2026-09-28
