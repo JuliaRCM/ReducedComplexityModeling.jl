@@ -9,8 +9,12 @@ using KernelAbstractions: KernelAbstractions, CPU
 using JET
 using Test
 
-# Each launcher line analyses one function that launches a kernel, at the concrete argument
-# types that the tests and doctests pass, on the `CPU()` backend of KernelAbstractions.
+# Each launcher line analyses one function that launches a kernel, on the `CPU()` backend of
+# KernelAbstractions. The element types are those that a test in `test/` outside
+# `test/quality/` passes to the launcher: `Float64` for `convert_input_and_batch_indices_to_array`
+# and `Int` for `onehotbatch`. No test calls `split_and_flatten` directly; its `Float32` line
+# follows `DataLoader(data, target)` in `test/data_loader/mnist_utils.jl`. The `Int` of its
+# doctest is in `test/quality/` and gets no line.
 const TimeSeriesQP = DataLoader{
     Float64, @NamedTuple{q::Array{Float64, 3}, p::Array{Float64, 3}}, Nothing, :TimeSeries}
 const RegularArray = DataLoader{Float64, Array{Float64, 3}, Nothing, :RegularData}
@@ -55,14 +59,10 @@ end
         @test isempty(JET.get_reports(JET.report_opt(
             split_and_flatten, (Array{Float32, 3},);
             target_modules = RCM)))
-        @test isempty(JET.get_reports(JET.report_opt(split_and_flatten, (Matrix{Int},);
-            target_modules = RCM)))
         @test isempty(kernel_body_reports(assign_val_kernel!, 4, zeros(Int, 10, 4), [
             1, 2, 5, 0]))
         @test isempty(kernel_body_reports(split_and_flatten_kernel!, (28, 28, 2),
             zeros(Float32, 49, 16, 2), zeros(Float32, 28, 28, 2), 7, 16))
-        @test isempty(kernel_body_reports(split_and_flatten_kernel!, (6, 6, 1),
-            zeros(Int, 9, 4, 1), zeros(Int, 6, 6, 1), 3, 4))
     else
         @test_skip "JET does not work on Julia $(VERSION)"  # aviatesk/JET.jl#681
     end

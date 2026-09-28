@@ -119,4 +119,6 @@ written.
   body of each kernel that those functions launch, through the `cpu_<kernel>` function that
   `@kernel` generates, because the analysis of a launcher does not report a defect in a kernel body.
   On a Julia version where JET does not work, the file records one skipped test. JET and
-  KernelAbstractions are added to `test/Project.toml`.
+  KernelAbstractions are added to `test/Project.toml`, with no `[compat]` bound.
+- `test/Project.toml` no longer has `[compat]` entries for `AbstractNeuralNetworks` and `Random`.
+  Both are dependencies of the package, and the package's own `[compat]` bounds them.
