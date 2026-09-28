@@ -38,11 +38,11 @@ h5file = "temp.h5"
     @test size(p4) == (0,)
     @test size(p5) == (0,)
 
-    @test hassamples(p1) == true
-    @test hassamples(p2) == true
-    @test hassamples(p3) == true
-    @test hassamples(p4) == false
-    @test hassamples(p5) == false
+    @test hassamples(p1)
+    @test hassamples(p2)
+    @test hassamples(p3)
+    @test !hassamples(p4)
+    @test !hassamples(p5)
 
     @test collect(p1) == samples
     @test collect(p2) == samples
