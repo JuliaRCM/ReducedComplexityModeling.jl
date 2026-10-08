@@ -91,6 +91,9 @@ written.
 
 ### Changed
 
+- CI uploads coverage from the `Julia 1 - ubuntu-latest` job instead of `Julia min`, and a test
+  job saves the Julia cache only when it succeeds.
+
 - `src/data_loader/data_loader.jl` is now Unicode NFC-normalised. It stored `ṗ` as a base letter
   plus a combining mark, three times, inherited from macOS rather than chosen; `q̇` has no
   precomposed codepoint and is unchanged. Nothing about the compiled code changes — Julia's parser
