@@ -13,6 +13,6 @@ if "core" in GROUPS
     @safetestset "Data loader for a tensor" include("data_loader/draw_batch_for_tensor_test.jl")
     @safetestset "POD of the Lorenz system" include("integration/pod_lorenz.jl")
 end
-if "slow" in GROUPS
+if "doctests" in GROUPS
     @safetestset "Doctests" include("quality/doctests.jl")
 end
