@@ -50,10 +50,11 @@ written.
   the in-place companion of `train` and defines no method here. The exported names are
   `AbstractSolutionSpace`, `ObservableSpace`, `IntrinsicSpace`, `TrainingData`,
   `TrainingProblem`, `train` and `train!`. This adds `GeometricBase` to the dependencies with the
-  compat bound `0.14, 0.15`: 0.15.0's `Project.toml` declares `julia = "1.11"`, above this
-  package's own floor of 1.10, so 0.14 is admitted, and both abstract types this package imports
-  are already declared at `v0.14.0`. `test/Project.toml` gains `GeometricBase` and `Optim`, so
-  that the tests can name the GeometricBase types and the optimizer.
+  compat bound `0.14.6, 0.15`. GeometricBase 0.15 requires Julia 1.11, above this package's floor
+  of 1.10, so Julia 1.10 must admit a 0.14 release. The bound starts at 0.14.6, the first 0.14
+  release whose fallback `state_symbols(::AbstractDataType, ::AbstractSystem)` returns `()`;
+  0.14.1–0.14.5 return `missing`, so `state_symbols` of `ObservableData` would differ on them.
+  0.14.0 also cannot be installed with GeometricSolutions 0.6.
 
 ### Bug Fixes
 
