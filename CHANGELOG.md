@@ -33,6 +33,28 @@ written.
   order. The `HDF5` compat bound rises to `0.16.11, 0.17`, because 0.16.11 is the first HDF5.jl
   release where `keys(group)` returns a group's creation order.
 
+- Training data and training problems are first class. `TrainingData{SpaceType, DataType,
+  SystemType}(time, data[, problem])` tags data with three orthogonal axes: the space
+  (`ObservableSpace` or `IntrinsicSpace`, with the abstract supertype `AbstractSolutionSpace`),
+  what was recorded (`DataType`, one of GeometricBase's `ObservableData`, `StateData`,
+  `VectorFieldData` and `TangentVectorData`) and the structure of the system (`SystemType`, one of
+  GeometricBase's concrete systems, such as `CanonicalHamiltonianSystem`). The last two dispatch
+  `state_symbols`, which returns `(:q, :p)` for state data on a canonical Hamiltonian system and
+  `(:z,)` on a noncanonical one, so a method that expects one kind of data no longer accepts
+  another in silence. `TrainingProblem(data, residual, parameters)` holds the data, a residual
+  `residual(data, θ::NamedTuple)` and a `ParameterSpace`, and
+  `train(problem, method::Optim.FirstOrderOptimizer)` fits the parameters by minimising the
+  squared residual, starting from the sample whose loss is finite and smallest. The samples are
+  starting points and not bounds, and `train` returns the fitted parameters as a `NamedTuple` of
+  the samples' element type; it throws when Optim reports that it did not converge. `train!` is
+  the in-place companion of `train` and defines no method here. The exported names are
+  `AbstractSolutionSpace`, `ObservableSpace`, `IntrinsicSpace`, `TrainingData`,
+  `TrainingProblem`, `train` and `train!`. This adds `GeometricBase` to the dependencies with the
+  compat bound `0.14, 0.15`: 0.15.0's `Project.toml` declares `julia = "1.11"`, above this
+  package's own floor of 1.10, so 0.14 is admitted, and both abstract types this package imports
+  are already declared at `v0.14.0`. `test/Project.toml` gains `GeometricBase` and `Optim`, so
+  that the tests can name the GeometricBase types and the optimizer.
+
 ### Bug Fixes
 
 - `ParameterSpace` and `NamedTuple(::Parameter...)` now accept parameters with different element
@@ -89,6 +111,11 @@ written.
 
 - `AutoEncoderModel`, an exported stub type with no implemented behaviour, has been removed.
 
+- `TrainingData` is now a struct rather than an abstract type, and it is exported.
+  `GeometricIntegratorData` and `GeometricIntegratorEnsembleData` keep their fields and their
+  exports but no longer subtype it: they are not a kind of `TrainingData` any more. Nothing
+  dispatched on the old abstract type, in this package or outside it, so no call site changes.
+
 ### Changed
 
 - `Pkg.test()` no longer runs the doctests. `test/quality/doctests.jl` is now the group `doctests`, which an empty `ARGS` does not run; `Pkg.test(test_args = ["doctests"])` runs it. In CI the Doctests job stays their runner, so the test matrix no longer runs them a second time.
@@ -104,13 +131,14 @@ written.
   before it silently matched nothing. The file is byte-equal to the NFC normalisation of its
   predecessor; no string literal was affected, and no changed line falls inside a doctest block.
 
-- Internal stub types have been removed: `TrainingProblem` and marker data types (`GenericData`,
-  `VectorFieldData`, `TrajectoryData`, `InputOutputData`, `ProjectionData`, `AutoEncoderData`,
-  `VlasovParticleMethodData`, `VlasovVariationalIntegratorData`), plus `learn(::TrainingProblem)`.
-  None of these had any behaviour — the marker types are empty structs, and `TrainingProblem`'s
-  constructor and `learn` have empty bodies. All were internal (not exported; reachable only as
-  `ReducedComplexityModeling.TrainingProblem` etc.). Neither this package nor ReducedBasisMethods
-  uses any of them.
+- Internal stub types have been removed: the marker data types (`GenericData`, `VectorFieldData`,
+  `TrajectoryData`, `InputOutputData`, `ProjectionData`, `AutoEncoderData`,
+  `VlasovParticleMethodData`, `VlasovVariationalIntegratorData`) and the `learn` function. None of
+  these had any behaviour — the marker types are empty structs, and `learn`'s body was empty. All
+  were internal (not exported; reachable only as `ReducedComplexityModeling.VectorFieldData` etc.).
+  Neither this package nor ReducedBasisMethods uses any of them. The `TrainingProblem` stub is
+  removed as well; the exported `TrainingProblem` of the training-data entry above replaces it,
+  with the behaviour the stub never had. `learn` stays removed: the entry point is `train`.
 
 - The doctests of `Batch` and `number_of_batches` no longer print the batches of a seeded
   shuffle, whose values differ between Julia 1.10–1.12 and 1.13. They now print the length of
