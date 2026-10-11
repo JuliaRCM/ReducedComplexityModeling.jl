@@ -13,7 +13,7 @@ because a changelog assembled after the fact loses exactly the reasoning that ma
 keeping. The `[Unreleased]` target below is provisional — confirm it when the first entry is
 written.
 
-## [Unreleased] — targeting 0.2.0
+## [0.2.0] — 2026-10-11
 
 ### New Features
 
