@@ -53,8 +53,8 @@
 
 ### K5 · `SystemType` is declared by the caller and cannot be inferred from a problem
 
-- **Location:** `src/TrainingData/TrainingData.jl:73`, the `SY <: AbstractSystem` parameter of
-  `TrainingData`.
+- **Location:** `src/TrainingData/TrainingData.jl:75`, the `SY <: AbstractSystem` parameter of the
+  `TrainingData` struct declared at `:72`.
 - **Evidence:** `hashamiltonian` and `haslagrangian` of `GeometricEquations` separate a
   Hamiltonian problem from a Lagrangian one and nothing finer:
 
@@ -75,3 +75,61 @@
   a problem have no trait to read at all.
 - **Kind:** upstream
 - **Found:** 2026-10-10
+
+### K6 · `problem(td, i)` is not inferred and allocates on every call
+
+- **Location:** `src/TrainingData/TrainingData.jl:114`, the `problem(td::TrainingData, i)` method.
+- **Evidence:** a cold `Base.return_types(member2, (typeof(td),))`, with
+  `member2(td) = problem(td, 2)` and `td` the benchmark ensemble data, gives
+  `EquationProblem{_A, Float32, …} where _A<:GeometricEquation` in `Float32` and the `Float64` form
+  in `Float64`; `allocations(member2, td)` is 384 B in `Float32` and 464 B in `Float64`,
+  while `allocations(state_symbols, td)` is 0 and the control `allocations(collect, T[1, 2])` reads
+  64 B and 80 B. The raw upstream call `problem(ens, 2)` allocates the same 384 B and 464 B, so the
+  cost is not the forwarding. The cause is in `GeometricEquations` 0.21.5:
+  `problem(::EnsembleProblem, i)` calls the `EquationProblem` constructor, which computes its first
+  type parameter with `eval(typeof(equ).name.name)` (`src/problems/equation_problem.jl:82`) and
+  runs `check_methods` on every construction (`:79`). `ReducedComplexityModeling` only forwards
+  the call, so there is no local fix.
+- **Kind:** upstream
+- **Found:** 2026-10-11 (critic round 1c)
+
+### K7 · The space guard admits `Union{}`
+
+- **Location:** `src/TrainingData/TrainingData.jl:89`, the space guard of the inner constructor.
+- **Evidence:** `Union{}` is a subtype of both `ObservableSpace` and `IntrinsicSpace`, so
+  `TrainingData{Union{}, StateData, CanonicalHamiltonianSystem}(t, X)` constructs and the value
+  matches both `TrainingData{<:IntrinsicSpace}` and `TrainingData{<:ObservableSpace}`. The guard is
+  the literal `ST <: ObservableSpace || ST <: IntrinsicSpace`, which `Union{}` satisfies.
+- **Kind:** found late
+- **Found:** 2026-10-11 (critic round 1a)
+
+### K8 · `merit` builds its `NamedTuple` dynamically, so `train` does not infer
+
+- **Location:** `src/TrainingProblem.jl:61`, `merit(x) = loss(result_type(Tuple(x)))`.
+- **Evidence:** `Tuple(x)` of a `Vector` has an unknown length, so `result_type(Tuple(x))` builds a
+  `NamedTuple` on every `Optim` call and `train` does not infer, although `merit` is internal and
+  `NTuple{N, T}(x)` with `N = length(parameters.parameters)` would make both concrete. The return
+  form `NamedTuple{keys(ps.parameters)}(Tuple(Optim.minimizer(res)))` is unchanged.
+- **Kind:** defect
+- **Found:** 2026-10-11 (critic round 1a)
+
+### K9 · A 0-dimensional `data` array throws `BoundsError`
+
+- **Location:** `src/TrainingData/TrainingData.jl:96`, the two-argument constructor.
+- **Evidence:** `TrainingData{ObservableSpace, StateData, CanonicalHamiltonianSystem}([0.0], fill(1.0))`
+  throws `BoundsError` from `size(data, ndims(data))` at `:98`, because `ndims(data) == 0`, where a
+  `DimensionMismatch` is meant. The shapes the constructor names are a vector, a matrix and a
+  3-array.
+- **Kind:** found late
+- **Found:** 2026-10-11 (critic round 1b)
+
+### K10 · Dropping `x_reltol = eps(T)` leaves every test green
+
+- **Location:** `src/TrainingProblem.jl:65`, `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))`.
+- **Evidence:** the mutant `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))` →
+  `Optim.Options(g_abstol = zero(T))`, run with `mutate.jl <worktree> --warm <list> --jobs 3
+  TrainingData/TrainingData.jl TrainingProblem.jl`, prints `SURVIVED`, and no input on which the two
+  option sets differ is known, so it may be an equivalent mutant. The two options are fixed as they
+  stand.
+- **Kind:** not verified
+- **Found:** 2026-10-11 (critic round 1a)

@@ -16,8 +16,9 @@ function euler_trajectory(::Type{T}, k, m) where {T}
     X[1, 1] = q
     X[2, 1] = p
     for n in 1:NSTEPS
-        q = q + h * p / m
-        p = p - h * k * q
+        qnext = q + h * p / m
+        pnext = p - h * k * q
+        q, p = qnext, pnext
         X[1, n + 1] = q
         X[2, n + 1] = p
     end
@@ -34,8 +35,9 @@ function euler_residual(data, θ, scale)
     q = W(X[1, 1])
     p = W(X[2, 1])
     for n in 1:NSTEPS
-        q = q + h * p / θ.m
-        p = p - h * θ.k * q
+        qnext = q + h * p / θ.m
+        pnext = p - h * θ.k * q
+        q, p = qnext, pnext
         r[2n - 1] = s * (q - X[1, n + 1])
         r[2n] = s * (p - X[2, n + 1])
     end
@@ -54,10 +56,10 @@ function euler_problem(::Type{T}, scale) where {T}
     return RCM.TrainingProblem(data, (d, θ) -> euler_residual(d, θ, scale), parameters)
 end
 
-# A problem over one trivial `TrainingData`, for a residual that needs no data.
-function trivial_problem(residual, parameters)
+# A problem over one trivial `TrainingData` in `T`, for a residual that needs no data.
+function trivial_problem(::Type{T}, residual, parameters) where {T}
     data = RCM.TrainingData{
-        RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}([0.0], zeros(1, 1))
+        RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(T[0], zeros(T, 1, 1))
     return RCM.TrainingProblem(data, residual, parameters)
 end
 
@@ -83,48 +85,79 @@ end
         end
     end
 
-    @testset "the scan starts from the smallest finite loss" begin
-        # its finite samples sit at a = 7/2 with loss 2.5625, away from the minimiser a = 4;
-        # the samples with a = 0 are NaN, and the mid-range of the box reaches a = 1 instead
-        residual = function (d, θ)
-            a, b = θ.a, θ.b
-            a < 1 / 2 && return [NaN, NaN]
-            return [(a - 1) * (a - 4), b - 2]
+    @testset "the recorded data are the explicit Euler map" begin
+        # an independent computation of the map, so the fixture cannot drift to another scheme
+        for T in (Float32, Float64)
+            k, m = T(17) / T(10), T(11) / T(20)
+            h = one(T) / T(10)
+            X = euler_trajectory(T, k, m)
+            q, p = one(T), zero(T)
+            @test X[1, 1] == q
+            @test X[2, 1] == p
+            for n in 1:NSTEPS
+                qnext = q + h * p / m
+                pnext = p - h * k * q
+                q, p = qnext, pnext
+                @test X[1, n + 1] == q
+                @test X[2, n + 1] == p
+            end
         end
-        parameters = RCM.ParameterSpace(
-            RCM.Parameter(:a, 0.0, 7 / 2, 2), RCM.Parameter(:b, 1.0, 3.0, 2))
+    end
 
-        fit = train(trivial_problem(residual, parameters), LBFGS())
-        @test isapprox(fit.a, 4)
-        @test isapprox(fit.b, 2)
+    @testset "the scan starts from the smallest finite loss" begin
+        # the samples of `a` are 0, 7/4 and 7/2: a = 0 is NaN, a = 7/4 is finite but larger
+        # (loss 3.8477) and reaches a = 1, and a = 7/2 (loss 2.5625) reaches the minimiser
+        # a = 4. The first finite sample and the largest finite loss are both a = 7/4, so a
+        # scan that picks either of those reaches a = 1 and fails the assertion.
+        for T in (Float32, Float64)
+            residual = function (d, θ)
+                a, b = θ.a, θ.b
+                a < T(1) / 2 && return T[NaN, NaN]
+                return [(a - 1) * (a - 4), b - 2]
+            end
+            parameters = RCM.ParameterSpace(
+                RCM.Parameter(:a, T(0), T(7) / 2, 3), RCM.Parameter(:b, T(1), T(3), 2))
+
+            fit = train(trivial_problem(T, residual, parameters), LBFGS())
+            @test typeof(fit.a) === T
+            @test isapprox(fit.a, T(4); rtol = sqrt(eps(T)))
+            @test isapprox(fit.b, T(2); rtol = sqrt(eps(T)))
+        end
     end
 
     @testset "a loss that is nowhere finite is an ArgumentError" begin
-        parameters = RCM.ParameterSpace(
-            RCM.Parameter(:a, 0.0, 1.0, 2), RCM.Parameter(:b, 0.0, 1.0, 2))
-        @test_throws ArgumentError train(
-            trivial_problem((d, θ) -> [NaN, NaN], parameters), LBFGS())
-        @test_throws ArgumentError train(
-            trivial_problem((d, θ) -> [Inf, -Inf], parameters), LBFGS())
+        for T in (Float32, Float64)
+            parameters = RCM.ParameterSpace(
+                RCM.Parameter(:a, T(0), T(1), 2), RCM.Parameter(:b, T(0), T(1), 2))
+            @test_throws ArgumentError train(
+                trivial_problem(T, (d, θ) -> T[NaN, NaN], parameters), LBFGS())
+            @test_throws ArgumentError train(
+                trivial_problem(T, (d, θ) -> T[Inf, -Inf], parameters), LBFGS())
+        end
     end
 
     @testset "no convergence is an error" begin
-        parameters = RCM.ParameterSpace(
-            RCM.Parameter(:a, 0.0, 1.0, 2), RCM.Parameter(:b, 0.0, 2.0, 2))
-        @test_throws ErrorException train(
-            trivial_problem((d, θ) -> [exp(-θ.a), θ.b - 1], parameters), LBFGS())
+        for T in (Float32, Float64)
+            parameters = RCM.ParameterSpace(
+                RCM.Parameter(:a, T(0), T(1), 2), RCM.Parameter(:b, T(0), T(2), 2))
+            @test_throws ErrorException train(
+                trivial_problem(T, (d, θ) -> [exp(-θ.a), θ.b - one(T)], parameters), LBFGS())
+        end
     end
 
     @testset "an exception of the residual propagates" begin
-        parameters = RCM.ParameterSpace(
-            RCM.Parameter(:a, 0.0, 1.0, 2), RCM.Parameter(:b, 0.0, 1.0, 2))
-        @test_throws DomainError train(
-            trivial_problem((d, θ) -> throw(DomainError(θ.a, "no model")), parameters),
-            LBFGS())
+        for T in (Float32, Float64)
+            parameters = RCM.ParameterSpace(
+                RCM.Parameter(:a, T(0), T(1), 2), RCM.Parameter(:b, T(0), T(1), 2))
+            @test_throws DomainError train(
+                trivial_problem(T, (d, θ) -> throw(DomainError(θ.a, "no model")), parameters),
+                LBFGS())
+        end
     end
 
     @testset "the method is a first-order optimizer" begin
-        problem = euler_problem(Float64, 1.0)
-        @test_throws MethodError train(problem, NelderMead())
+        for T in (Float32, Float64)
+            @test_throws MethodError train(euler_problem(T, one(T)), NelderMead())
+        end
     end
 end

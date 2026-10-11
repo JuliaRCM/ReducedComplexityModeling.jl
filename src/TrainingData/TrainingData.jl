@@ -67,8 +67,7 @@ and a 3-array are all accepted.
 
 `DataType` and `SystemType` must be concrete, and `SpaceType` must be a subtype of
 `ObservableSpace` or of `IntrinsicSpace`; anything else throws an `ArgumentError`, rather than
-letting `state_symbols` construct a system the caller did not mean. All three keep the names of
-the type parameters of the design this type lands.
+letting `state_symbols` construct a system the caller did not mean.
 """
 struct TrainingData{
     ST <: AbstractSolutionSpace,
