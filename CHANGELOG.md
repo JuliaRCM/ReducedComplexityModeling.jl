@@ -35,21 +35,24 @@ written.
 
 - Training data and training problems are first class. `TrainingData{SpaceType, DataType,
   SystemType}(time, data[, problem])` tags data with three orthogonal axes: the space
-  (`ObservableSpace` or `IntrinsicSpace`, with the abstract supertype `AbstractSolutionSpace`),
-  what was recorded (`DataType`, one of GeometricBase's `ObservableData`, `StateData`,
-  `VectorFieldData` and `TangentVectorData`) and the structure of the system (`SystemType`, one of
-  GeometricBase's concrete systems, such as `CanonicalHamiltonianSystem`). The last two dispatch
-  `state_symbols`, which returns `(:q, :p)` for state data on a canonical Hamiltonian system and
-  `(:z,)` on a noncanonical one, so a method that expects one kind of data no longer accepts
-  another in silence. `TrainingProblem(data, residual, parameters)` holds the data, a residual
-  `residual(data, θ::NamedTuple)` and a `ParameterSpace`, and
-  `train(problem, method::Optim.FirstOrderOptimizer)` fits the parameters by minimising the
-  squared residual, starting from the sample whose loss is finite and smallest. The samples are
-  starting points and not bounds, and `train` returns the fitted parameters as a `NamedTuple` of
-  the samples' element type; it throws when Optim reports that it did not converge. `train!` is
-  the in-place companion of `train` and defines no method here. The exported names are
-  `AbstractSolutionSpace`, `ObservableSpace`, `IntrinsicSpace`, `TrainingData`,
-  `TrainingProblem`, `train` and `train!`. This adds `GeometricBase` to the dependencies with the
+  (`ObservableSpace` or `IntrinsicSpace`), what was recorded (`DataType`, one of GeometricBase's
+  `ObservableData`, `StateData`, `VectorFieldData` and `TangentVectorData`) and the structure of the
+  system (`SystemType`, one of GeometricBase's concrete systems, such as
+  `CanonicalHamiltonianSystem`). The last two dispatch `state_symbols`, which returns `(:q, :p)` for
+  state data on a canonical Hamiltonian system and `(:z,)` on a noncanonical one, so a method that
+  expects one kind of data no longer accepts another in silence. A shape mismatch between `time` and
+  `data` throws a `DimensionMismatch`. The ensemble constructor, `TrainingData{SpaceType, DataType,
+  SystemType}(solution::EnsembleSolution)`, builds `data` from the variables that `state_symbols`
+  names, and `time` from the stored times. `TrainingProblem(data, residual, parameters)` holds the
+  data, a residual `residual(data, θ::NamedTuple)` and a `ParameterSpace`, and
+  `train(problem, method::Optim.FirstOrderOptimizer)` fits the parameters by minimising the squared
+  residual, starting from the sample whose loss is finite and smallest. The samples are starting
+  points and not bounds, and `train` returns the fitted parameters as a `NamedTuple` of the samples'
+  element type. Its stopping test is relative to the gradient at the start, so it converges on noisy
+  data, where the loss does not vanish at the minimiser; it throws when Optim reports that it did not
+  converge. `train!` is the in-place companion of `train` and defines no method here. The exported
+  names are `ObservableSpace`, `IntrinsicSpace`, `TrainingData`, `TrainingProblem`, `train` and
+  `train!`. This adds `GeometricBase` to the dependencies with the
   compat bound `0.14.6, 0.15`. GeometricBase 0.15 requires Julia 1.11, above this package's floor
   of 1.10, so Julia 1.10 must admit a 0.14 release. The bound starts at 0.14.6, the first 0.14
   release whose fallback `state_symbols(::AbstractDataType, ::AbstractSystem)` returns `()`;
