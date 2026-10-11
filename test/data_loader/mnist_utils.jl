@@ -5,7 +5,6 @@ using ReducedComplexityModeling: patch_index
 using ReducedComplexityModeling: within_patch_index
 using ReducedComplexityModeling: index_conversion
 using ReducedComplexityModeling: onehotbatch
-using ReducedComplexityModeling: NeuralNetworkParameters
 using AbstractNeuralNetworks: Chain
 using Random: seed!
 

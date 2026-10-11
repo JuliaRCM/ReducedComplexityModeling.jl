@@ -13,6 +13,21 @@ because a changelog assembled after the fact loses exactly the reasoning that ma
 keeping. The `[Unreleased]` target below is provisional — confirm it when the first entry is
 written.
 
+## [Unreleased]
+
+### Changed
+
+- `[compat] AbstractNeuralNetworks` admits 0.8 as well as 0.6. This is what makes the package
+  installable in an environment with `GeometricOptimizers` 0.7 or 0.8, both of which require
+  AbstractNeuralNetworks 0.8, and therefore usable by `SparseIdentification`. The wider bound alone
+  does not load the package: AbstractNeuralNetworks 0.7 removed `QPT`, `QPTOAT` and
+  `NeuralNetworkParameters`, which this package used only as dispatch annotations in the
+  data-loader fork, so it now defines `QPT` and `QPTOAT` itself, copied from
+  AbstractNeuralNetworks 0.6.4, imports only `Chain` and `NeuralNetwork`, and leaves the `ps`
+  argument of `accuracy` untyped. `0.6` stays in the union, so that a Julia 1.10 environment, this
+  package's floor, still resolves AbstractNeuralNetworks 0.6.4; the 0.7 releases are left out of
+  the union. No data format, result or public name changes.
+
 ## [0.2.0] — 2026-10-11
 
 ### New Features

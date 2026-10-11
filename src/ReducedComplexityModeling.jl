@@ -11,7 +11,13 @@ using LinearAlgebra
 using Optim
 using TypedTables
 using KernelAbstractions
-using AbstractNeuralNetworks: QPT, QPTOAT, Chain, NeuralNetworkParameters, NeuralNetwork
+using AbstractNeuralNetworks: Chain, NeuralNetwork
+
+# `QPT` and `QPTOAT` are the data types the `DataLoader` methods dispatch on. AbstractNeuralNetworks
+# defined them up to 0.6 and dropped them in 0.7, so they are defined here, with the definitions
+# AbstractNeuralNetworks 0.6.4 has.
+const QPT{T} = NamedTuple{(:q, :p), Tuple{AT, AT}} where {T, AT <: AbstractArray{T}}
+const QPTOAT{T} = Union{QPT{T}, AbstractArray{T}} where {T}
 
 import GeometricBase: state_symbols
 import ChainRulesCore
