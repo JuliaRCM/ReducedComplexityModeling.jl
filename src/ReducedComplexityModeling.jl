@@ -30,7 +30,7 @@ include("data_loader/batch.jl")
 
 include("TrainingData/TrainingData.jl")
 
-export AbstractSolutionSpace, ObservableSpace, IntrinsicSpace, TrainingData
+export ObservableSpace, IntrinsicSpace, TrainingData
 
 include("Models/Models.jl")
 

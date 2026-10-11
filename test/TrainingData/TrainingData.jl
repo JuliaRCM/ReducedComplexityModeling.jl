@@ -77,8 +77,8 @@ intrinsic_only(td::RCM.TrainingData{<:RCM.IntrinsicSpace}) = :intrinsic
                 @test intrinsic_only(td_intrinsic) === :intrinsic
                 @test intrinsic_only(td_local) === :intrinsic
                 @test_throws MethodError intrinsic_only(td_plain)
-                @test_throws ArgumentError RCM.TrainingData{
-                    Union{}, StateData, CanonicalHamiltonianSystem}(time, X)
+                @test_throws TypeError RCM.TrainingData{
+                    Real, StateData, CanonicalHamiltonianSystem}(time, X)
             end
 
             @testset "DataType and SystemType dispatch through state_symbols" begin
@@ -129,9 +129,6 @@ intrinsic_only(td::RCM.TrainingData{<:RCM.IntrinsicSpace}) = :intrinsic
                 @test_throws ArgumentError RCM.TrainingData{
                     RCM.ObservableSpace, GeometricBase.AbstractDataType,
                     CanonicalHamiltonianSystem}(time, X)
-                @test_throws ArgumentError RCM.TrainingData{
-                    RCM.AbstractSolutionSpace, StateData, CanonicalHamiltonianSystem}(
-                    time, X)
             end
 
             @testset "the time axis is the last dimension of the data" begin
@@ -147,11 +144,62 @@ intrinsic_only(td::RCM.TrainingData{<:RCM.IntrinsicSpace}) = :intrinsic
                     RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(
                     T[0], fill(one(T)))
 
+                # the form with a problem checks the same shape
+                @test_throws DimensionMismatch RCM.TrainingData{
+                    RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(
+                    T[0, 1], zeros(T, 2, 7), nothing)
+                @test_throws DimensionMismatch RCM.TrainingData{
+                    RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(
+                    time20, zeros(T, 2, 20, 3), ens)
+                @test_throws DimensionMismatch RCM.TrainingData{
+                    RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(
+                    T[0], fill(one(T)), ens)
+
                 td3 = RCM.TrainingData{
                     RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(
                     time20, zeros(T, 2, 3, 20))
                 @test size(td3.data) == (2, 3, 20)
                 @test length(td3.time) == 20
+            end
+
+            @testset "an ensemble is stored in the layout of the plain form" begin
+                isol = integrate(ens, ImplicitMidpoint())
+                tdi = RCM.TrainingData{
+                    RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(isol)
+
+                @test tdi.time isa Vector{T}
+                @test tdi.time == T[0, 1 / 10]
+                @test state_symbols(tdi) == (:q, :p)
+                @test size(tdi.data) == (4, length(BETAS), 2)
+                @test tdi.problem === ens
+                for (i, s) in enumerate(isol)
+                    for n in 0:1
+                        @test tdi.data[:, i, n + 1] == vcat(s.q[n], s.p[n])
+                    end
+                end
+                # the members differ after one step, so a swap of the member axis fails
+                @test tdi.data[:, 1, 2] ≠ tdi.data[:, 2, 2]
+
+                # the data type selects the variables of the solution
+                tdv = RCM.TrainingData{
+                    RCM.ObservableSpace, VectorFieldData, CanonicalHamiltonianSystem}(isol)
+                for (i, s) in enumerate(isol)
+                    for n in 0:1
+                        @test tdv.data[:, i, n + 1] == vcat(s.q̇[n], s.ṗ[n])
+                    end
+                end
+                @test tdv.data ≠ tdi.data
+
+                # observable data name no variable, and the solution has no z
+                @test_throws ArgumentError RCM.TrainingData{
+                    RCM.ObservableSpace, ObservableData, CanonicalHamiltonianSystem}(isol)
+                @test_throws ArgumentError RCM.TrainingData{
+                    RCM.ObservableSpace, StateData, NoncanonicalHamiltonianSystem}(isol)
+                @test_throws ArgumentError RCM.TrainingData{
+                    RCM.ObservableSpace, StateData, HamiltonianSystem}(isol)
+                @test_throws ArgumentError RCM.TrainingData{
+                    RCM.ObservableSpace, GeometricBase.AbstractDataType,
+                    CanonicalHamiltonianSystem}(isol)
             end
         end
     end
