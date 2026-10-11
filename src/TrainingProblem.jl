@@ -56,16 +56,17 @@ function train(problem::TrainingProblem, method::Optim.FirstOrderOptimizer)
         "no sample of the parameter space gives a finite loss, so `train` has no starting point"))
 
     result_type = NamedTuple{keys(parameters.parameters)}
+    N = length(parameters.parameters)
     x₀ = collect(T, values(parameters(index)))
 
-    merit(x) = loss(result_type(Tuple(x)))
+    merit(x) = loss(result_type(ntuple(i -> x[i], Val(N))))
     gradient!(G, x) = ForwardDiff.gradient!(G, merit, x)
 
     result = Optim.optimize(merit, gradient!, x₀, method,
         Optim.Options(g_abstol = zero(T), x_reltol = eps(T)))
     Optim.converged(result) || error("`train` did not converge: $result")
 
-    return result_type(Tuple(Optim.minimizer(result)))
+    return result_type(ntuple(i -> Optim.minimizer(result)[i], Val(N)))
 end
 
 """

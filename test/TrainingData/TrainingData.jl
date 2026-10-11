@@ -107,6 +107,8 @@ intrinsic_only(td::RCM.TrainingData{<:RCM.IntrinsicSpace}) = :intrinsic
                 @test intrinsic_only(td_intrinsic) === :intrinsic
                 @test intrinsic_only(td_local) === :intrinsic
                 @test_throws MethodError intrinsic_only(td_plain)
+                @test_throws ArgumentError RCM.TrainingData{
+                    Union{}, StateData, CanonicalHamiltonianSystem}(time, X)
             end
 
             @testset "DataType and SystemType dispatch through state_symbols" begin
@@ -175,6 +177,9 @@ intrinsic_only(td::RCM.TrainingData{<:RCM.IntrinsicSpace}) = :intrinsic
                 @test_throws DimensionMismatch RCM.TrainingData{
                     RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(
                     time20, zeros(T, 2, 20, 3))
+                @test_throws DimensionMismatch RCM.TrainingData{
+                    RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(
+                    T[0], fill(one(T)))
 
                 td3 = RCM.TrainingData{
                     RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(

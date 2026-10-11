@@ -61,9 +61,10 @@ axis and the data themselves; it redefines neither of the others.
 problem from a Lagrangian one and nothing finer, and data need not come from a problem at all.
 
 The second constructor stores `solution.t`, `solution.s` and `solution.problem` itself, not a
-copy of the problem. The first one takes the time along the *last* dimension of `data` and sets
-`problem` to `nothing`; `time` must have `size(data, ndims(data))` entries, so a vector, a matrix
-and a 3-array are all accepted.
+copy of the problem. The first one is called with two or three arguments: with two it takes the
+time along the *last* dimension of `data` and sets `problem` to `nothing`, so `time` must have
+`size(data, ndims(data))` entries and a vector, a matrix and a 3-array are all accepted; with
+three it stores the `problem` it is given and checks no shape.
 
 `DataType` and `SystemType` must be concrete, and `SpaceType` must be a subtype of
 `ObservableSpace` or of `IntrinsicSpace`; anything else throws an `ArgumentError`, rather than
@@ -86,15 +87,17 @@ struct TrainingData{
         isconcretetype(SY) || throw(ArgumentError(
             "the system type $SY of a TrainingData must be a concrete type, " *
             "such as CanonicalHamiltonianSystem or RegularLagrangianSystem"))
-        (ST <: ObservableSpace || ST <: IntrinsicSpace) || throw(ArgumentError(
-            "the space type $ST of a TrainingData must be a subtype of " *
-            "ObservableSpace or of IntrinsicSpace"))
+        (ST !== Union{} && (ST <: ObservableSpace || ST <: IntrinsicSpace)) ||
+            throw(ArgumentError(
+                "the space type $ST of a TrainingData must be a subtype of " *
+                "ObservableSpace or of IntrinsicSpace"))
         new{ST, DT, SY, TT, AT, PT}(time, data, problem)
     end
 end
 
 function TrainingData{ST, DT, SY}(time::AbstractVector, data::AbstractArray) where {
         ST, DT, SY}
+    ndims(data) > 0 || throw(DimensionMismatch("the data must have a time dimension"))
     size(data, ndims(data)) == length(time) || throw(DimensionMismatch(
         "the last dimension of the data has $(size(data, ndims(data))) entries, " *
         "but there are $(length(time)) times"))

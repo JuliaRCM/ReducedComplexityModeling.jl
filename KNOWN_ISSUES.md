@@ -78,7 +78,7 @@
 
 ### K6 · `problem(td, i)` is not inferred and allocates on every call
 
-- **Location:** `src/TrainingData/TrainingData.jl:114`, the `problem(td::TrainingData, i)` method.
+- **Location:** `src/TrainingData/TrainingData.jl:116`, the `problem(td::TrainingData, i)` method.
 - **Evidence:** a cold `Base.return_types(member2, (typeof(td),))`, with
   `member2(td) = problem(td, 2)` and `td` the benchmark ensemble data, gives
   `EquationProblem{_A, Float32, …} where _A<:GeometricEquation` in `Float32` and the `Float64` form
@@ -93,39 +93,9 @@
 - **Kind:** upstream
 - **Found:** 2026-10-11 (critic round 1c)
 
-### K7 · The space guard admits `Union{}`
-
-- **Location:** `src/TrainingData/TrainingData.jl:89`, the space guard of the inner constructor.
-- **Evidence:** `Union{}` is a subtype of both `ObservableSpace` and `IntrinsicSpace`, so
-  `TrainingData{Union{}, StateData, CanonicalHamiltonianSystem}(t, X)` constructs and the value
-  matches both `TrainingData{<:IntrinsicSpace}` and `TrainingData{<:ObservableSpace}`. The guard is
-  the literal `ST <: ObservableSpace || ST <: IntrinsicSpace`, which `Union{}` satisfies.
-- **Kind:** found late
-- **Found:** 2026-10-11 (critic round 1a)
-
-### K8 · `merit` builds its `NamedTuple` dynamically, so `train` does not infer
-
-- **Location:** `src/TrainingProblem.jl:61`, `merit(x) = loss(result_type(Tuple(x)))`.
-- **Evidence:** `Tuple(x)` of a `Vector` has an unknown length, so `result_type(Tuple(x))` builds a
-  `NamedTuple` on every `Optim` call and `train` does not infer, although `merit` is internal and
-  `NTuple{N, T}(x)` with `N = length(parameters.parameters)` would make both concrete. The return
-  form `NamedTuple{keys(ps.parameters)}(Tuple(Optim.minimizer(res)))` is unchanged.
-- **Kind:** defect
-- **Found:** 2026-10-11 (critic round 1a)
-
-### K9 · A 0-dimensional `data` array throws `BoundsError`
-
-- **Location:** `src/TrainingData/TrainingData.jl:96`, the two-argument constructor.
-- **Evidence:** `TrainingData{ObservableSpace, StateData, CanonicalHamiltonianSystem}([0.0], fill(1.0))`
-  throws `BoundsError` from `size(data, ndims(data))` at `:98`, because `ndims(data) == 0`, where a
-  `DimensionMismatch` is meant. The shapes the constructor names are a vector, a matrix and a
-  3-array.
-- **Kind:** found late
-- **Found:** 2026-10-11 (critic round 1b)
-
 ### K10 · Dropping `x_reltol = eps(T)` leaves every test green
 
-- **Location:** `src/TrainingProblem.jl:65`, `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))`.
+- **Location:** `src/TrainingProblem.jl:66`, `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))`.
 - **Evidence:** the mutant `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))` →
   `Optim.Options(g_abstol = zero(T))`, run with `mutate.jl <worktree> --warm <list> --jobs 3
   TrainingData/TrainingData.jl TrainingProblem.jl`, prints `SURVIVED`, and no input on which the two
@@ -133,3 +103,39 @@
   stand.
 - **Kind:** not verified
 - **Found:** 2026-10-11 (critic round 1a)
+
+### K11 · `TrainingData(sol::EnsembleSolution)` does not infer, because `EnsembleSolution.t` is abstract
+
+- **Location:** `src/TrainingData/TrainingData.jl:106`, the
+  `TrainingData{ST, DT, SY}(sol::EnsembleSolution)` constructor.
+- **Evidence:** `EnsembleSolution{dType, tType, sType, probType}` of `GeometricSolutions` 0.6.6
+  declares `t::TimeSeries{tType}` (`src/ensemble_solution.jl:69`), while `TimeSeries` takes three
+  parameters, `TimeSeries{T, N, OT <: OffsetVector{T}}` (`src/timeseries.jl:1`). The field type is
+  therefore the `UnionAll` `TimeSeries{Float64, N, OT} where {N, OT}`, which `isconcretetype`
+  rejects, and the constructor that forwards it does not infer:
+
+      julia --startup-file=no --project=test -e '
+      using GeometricBase, GeometricIntegrators, ReducedComplexityModeling
+      v!(v, t, q, p, params) = (v .= p)
+      f!(f, t, q, p, params) = (f .= -params.β^2 .* q)
+      h(t, q, p, params) = sum(abs2, p) / 2 + params.β^2 * sum(abs2, q) / 2
+      ics = [(q = [1.0, 0.5], p = [0.0, -0.5]) for _ in (5.95, 6.05)]
+      ens = HODEEnsemble(v!, f!, h, (0.0, 0.1), 0.1, ics;
+          parameters = [(β = 5.95,), (β = 6.05,)])
+      sol = EnsembleSolution(ens)
+      mk(s) = ReducedComplexityModeling.TrainingData{
+          ReducedComplexityModeling.ObservableSpace, StateData,
+          CanonicalHamiltonianSystem}(s)
+      rt = Base.return_types(mk, (typeof(sol),))[1]
+      println(isconcretetype(fieldtype(typeof(sol), :t)), " ", rt isa UnionAll, " ",
+          isconcretetype(rt))'
+      false true false
+
+  The first figure is the abstract field, the second that the return type is a `UnionAll` whose
+  free variable is `TT`, bounded by that same abstract `TimeSeries` type, and the third that the
+  constructor therefore does not infer a concrete `TrainingData`. The value itself is concrete:
+  `typeof(td)` carries the full `TimeSeries` type and `all(isconcretetype, fieldtypes(typeof(td)))`
+  holds. The cost is a dynamic dispatch at the call site and not a wrong type.
+  `ReducedComplexityModeling` only forwards the value, so there is no local fix.
+- **Kind:** upstream
+- **Found:** 2026-10-11 (pre-PR verification)

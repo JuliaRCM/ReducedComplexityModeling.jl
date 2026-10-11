@@ -76,7 +76,7 @@ end
                 # the truth is not a sample, so a fit that stops where it starts cannot pass
                 @test all(s -> (s.k, s.m) ≠ (ktrue, mtrue), collect(problem.parameters))
 
-                fit = train(problem, LBFGS())
+                fit = @inferred train(problem, LBFGS())
                 @test typeof(fit.k) === T
                 @test typeof(fit.m) === T
                 @test isapprox(fit.k, ktrue; rtol = sqrt(eps(T)))
