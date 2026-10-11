@@ -104,3 +104,17 @@
   `|a - 1/3| + (b - 1)²`, gives the same fit under both, so it may be an equivalent mutant.
 - **Kind:** not verified
 - **Found:** 2026-10-11 (critic round 1a)
+
+### K12 · `accuracy(::NeuralNetwork, ::DataLoader)` calls an undefined `params`
+
+- **Location:** `src/data_loader/data_loader.jl:540`, the method
+  `accuracy(nn::NeuralNetwork, dl::DataLoader) = accuracy(nn.model, params(nn), dl)`.
+- **Evidence:** `params` is defined neither by this package nor by `Base`.
+  `isdefined(ReducedComplexityModeling, :params)` is `false` in an environment with
+  AbstractNeuralNetworks 0.8.0 and in one with 0.6.4, since the module imports only `Chain` and
+  `NeuralNetwork` from it, and `isdefined(Base, :params)` is `false` on Julia 1.10, 1.11, 1.12 and
+  1.13. The call therefore raises `UndefVarError: params not defined in ReducedComplexityModeling`.
+  No test reaches the method and `accuracy` is not exported, so the suite passes. The defect is on
+  `main`: the import list of `src/ReducedComplexityModeling.jl` has never carried `params`.
+- **Kind:** defect
+- **Found:** 2026-10-11
