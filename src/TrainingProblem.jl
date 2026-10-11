@@ -30,9 +30,11 @@ sample whose loss is finite and smallest and may leave the box the samples span,
 returns the fitted parameters of the model and not a search over the box.
 
 The result is a `NamedTuple` with the keys of `problem.parameters.parameters` and the element
-type of the samples. Convergence is `Optim`'s flag: an `ErrorException` is thrown when `Optim`
-reports that it did not converge, and a start at a stationary point ends the fit there. An
-exception raised by `residual` propagates to the caller.
+type of the samples. The fit has converged when the norm of the gradient of the loss falls to
+`eps(T)^(2/3)` times its norm at the start, or when a step changes the parameters by less than
+`eps(T)` relative to their size, with `T` that element type. Convergence is `Optim`'s flag: an
+`ErrorException` is thrown when `Optim` reports that it did not converge, and a start at a
+stationary point ends the fit there. An exception raised by `residual` propagates to the caller.
 """
 function train(problem::TrainingProblem, method::Optim.FirstOrderOptimizer)
     (; data, residual, parameters) = problem
@@ -48,9 +50,14 @@ function train(problem::TrainingProblem, method::Optim.FirstOrderOptimizer)
     merit(x) = loss(astuple(parameters.parameters, x))
     gradient!(G, x) = ForwardDiff.gradient!(G, merit, x)
 
+    # The gradient tolerance is relative to the gradient at the start, so the stop rule does not
+    # depend on the scale of the residual and is met at the minimiser of noisy data, where the
+    # loss and its gradient do not vanish exactly.
+    x₀ = collect(T, values(parameters(index)))
+    g_abstol = eps(T)^(T(2) / 3) * norm(ForwardDiff.gradient(merit, x₀))
+
     result = Optim.optimize(
-        merit, gradient!, collect(T, values(parameters(index))), method,
-        Optim.Options(g_abstol = zero(T), x_reltol = eps(T)))
+        merit, gradient!, x₀, method, Optim.Options(; g_abstol, x_reltol = eps(T)))
     Optim.converged(result) || error("`train` did not converge: $result")
 
     return astuple(parameters.parameters, Optim.minimizer(result))

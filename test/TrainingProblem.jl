@@ -1,5 +1,6 @@
 using GeometricBase
 using Optim
+using Random
 using ReducedComplexityModeling
 using Test
 
@@ -32,11 +33,16 @@ function euler_residual(data, θ, scale)
     return W(scale) .* vec(euler_trajectory(W, θ.k, θ.m)[:, 2:end] .- X[:, 2:end])
 end
 
-"The `TrainingProblem` of the two-parameter model, with the residual scaled by `scale`."
-function euler_problem(::Type{T}, scale) where {T}
+"""
+The `TrainingProblem` of the two-parameter model, with the residual scaled by `scale` and
+Gaussian noise of standard deviation `σ`, drawn from `rng`, on the recorded states after the
+first.
+"""
+function euler_problem(::Type{T}, scale; σ = 0, rng = Xoshiro(0)) where {T}
     k, m = T(17) / T(10), T(11) / T(20)
     time = collect(zero(T):(T(1) / T(10)):T(2))
     X = euler_trajectory(T, k, m)
+    X[:, 2:end] .+= T(σ) .* randn(rng, T, 2, NSTEPS)
     data = RCM.TrainingData{
         RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(time, X)
     parameters = RCM.ParameterSpace(
@@ -103,12 +109,25 @@ end
         end
     end
 
+    @testset "train converges on noisy data" begin
+        # the loss and its gradient do not vanish at the minimiser of noisy data, so a stop rule
+        # that waits for an exactly zero gradient reports no convergence there
+        for T in (Float32, Float64), σ in (1e-3, 1e-2, 1e-1), seed in 1:20
+            ktrue, mtrue = T(17) / T(10), T(11) / T(20)
+            fit = train(euler_problem(T, one(T); σ, rng = Xoshiro(seed)), LBFGS())
+            @test isapprox(fit.k, ktrue; rtol = σ)
+            @test isapprox(fit.m, mtrue; rtol = σ)
+        end
+    end
+
     @testset "no convergence is an error" begin
+        # the loss is a for a > 0 and jumps to (1 - a)² ≥ 1 at a ≤ 0: it has no minimiser, and
+        # its gradient keeps norm 1 on the way to the infimum at a → 0⁺
         for T in (Float32, Float64)
-            parameters = RCM.ParameterSpace(
-                RCM.Parameter(:a, T(0), T(1), 2), RCM.Parameter(:b, T(0), T(2), 2))
+            residual = (d, θ) -> [θ.a > 0 ? sqrt(θ.a) : 1 - θ.a]
+            parameters = RCM.ParameterSpace(RCM.Parameter(:a, T(1), T(5), 2))
             @test_throws ErrorException train(
-                trivial_problem(T, (d, θ) -> [exp(-θ.a), θ.b - one(T)], parameters), LBFGS())
+                trivial_problem(T, residual, parameters), LBFGS())
         end
     end
 
