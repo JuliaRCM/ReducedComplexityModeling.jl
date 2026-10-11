@@ -53,8 +53,8 @@
 
 ### K5 · `SystemType` is declared by the caller and cannot be inferred from a problem
 
-- **Location:** `src/TrainingData/TrainingData.jl:75`, the `SY <: AbstractSystem` parameter of the
-  `TrainingData` struct declared at `:72`.
+- **Location:** `src/TrainingData/TrainingData.jl:76`, the `SY <: AbstractSystem` parameter of the
+  `TrainingData` struct declared at `:73`.
 - **Evidence:** `hashamiltonian` and `haslagrangian` of `GeometricEquations` separate a
   Hamiltonian problem from a Lagrangian one and nothing finer:
 
@@ -78,7 +78,7 @@
 
 ### K6 · `problem(td, i)` is not inferred and allocates on every call
 
-- **Location:** `src/TrainingData/TrainingData.jl:116`, the `problem(td::TrainingData, i)` method.
+- **Location:** `src/TrainingData/TrainingData.jl:117`, the `problem(td::TrainingData, i)` method.
 - **Evidence:** a cold `Base.return_types(member2, (typeof(td),))`, with
   `member2(td) = problem(td, 2)` and `td` the benchmark ensemble data, gives
   `EquationProblem{_A, Float32, …} where _A<:GeometricEquation` in `Float32` and the `Float64` form
@@ -106,7 +106,7 @@
 
 ### K11 · `TrainingData(sol::EnsembleSolution)` does not infer, because `EnsembleSolution.t` is abstract
 
-- **Location:** `src/TrainingData/TrainingData.jl:106`, the
+- **Location:** `src/TrainingData/TrainingData.jl:107`, the
   `TrainingData{ST, DT, SY}(sol::EnsembleSolution)` constructor.
 - **Evidence:** `EnsembleSolution{dType, tType, sType, probType}` of `GeometricSolutions` 0.6.6
   declares `t::TimeSeries{tType}` (`src/ensemble_solution.jl:69`), while `TimeSeries` takes three
