@@ -11,7 +11,7 @@ function snapshot_matrix(sol::DataSeries)
     Array(Z')
 end
 
-struct GeometricIntegratorData <: TrainingData
+struct GeometricIntegratorData
     solution::GeometricSolution
     snapshot::Matrix
 
@@ -63,7 +63,7 @@ function Base.Array(solutions::Vector{GeometricSolution}, ::Independent)
     Array(Z')
 end
 
-struct GeometricIntegratorEnsembleData <: TrainingData
+struct GeometricIntegratorEnsembleData
     solutions::Vector{GeometricSolution}
     snapshot::Array
 

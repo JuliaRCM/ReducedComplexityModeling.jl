@@ -50,3 +50,57 @@
   `@test`. `test/quality/jet.jl` takes the `Float32` type of its `split_and_flatten` lines from
   this call.
 - **Found:** 2026-09-28
+
+### K5 · `SystemType` is declared by the caller and cannot be inferred from a problem
+
+- **Location:** `src/TrainingData/TrainingData.jl:82`, the `SY <: AbstractSystem` parameter of the
+  `TrainingData` struct declared at `:79`.
+- **Evidence:** `hashamiltonian` and `haslagrangian` of `GeometricEquations` separate a
+  Hamiltonian problem from a Lagrangian one and nothing finer:
+
+      julia --startup-file=no --project=. -e '
+      using GeometricEquations
+      v!(v, t, q, p, params) = (v .= p)
+      f!(f, t, q, p, params) = (f .= -q)
+      h(t, q, p, params) = sum(abs2, p) / 2 + sum(abs2, q) / 2
+      prob = HODEProblem(v!, f!, h, (0.0, 1.0), 0.1, [1.0], [0.0])
+      println((hashamiltonian(prob), haslagrangian(prob)))'
+      (true, false)
+
+  Their methods are one per equation type — `Tuple{typeof(hashamiltonian), HODE}`,
+  `Tuple{typeof(hashamiltonian), HDAE}` and the `GeometricEquation` and `GeometricProblem`
+  fallbacks, and `haslagrangian` for `LODE` and `LDAE` — so nothing separates a canonical from a
+  noncanonical or Poisson system, nor a regular from a degenerate Lagrangian one. A
+  `TrainingData` therefore takes its `SystemType` from the caller, and data that never came from
+  a problem have no trait to read at all.
+- **Kind:** upstream
+- **Found:** 2026-10-10
+
+### K6 · `problem(td, i)` is not inferred and allocates on every call
+
+- **Location:** `src/TrainingData/TrainingData.jl:122`, the `problem(td::TrainingData, i)` method.
+- **Evidence:** a cold `Base.return_types(member2, (typeof(td),))`, with
+  `member2(td) = problem(td, 2)` and `td` the benchmark ensemble data, gives
+  `EquationProblem{_A, Float32, …} where _A<:GeometricEquation` in `Float32` and the `Float64` form
+  in `Float64`; `allocations(member2, td)` is 384 B in `Float32` and 464 B in `Float64`,
+  while `allocations(state_symbols, td)` is 0 and the control `allocations(collect, T[1, 2])` reads
+  64 B and 80 B. The raw upstream call `problem(ens, 2)` allocates the same 384 B and 464 B, so the
+  cost is not the forwarding. The cause is in `GeometricEquations` 0.21.5:
+  `problem(::EnsembleProblem, i)` calls the `EquationProblem` constructor, which computes its first
+  type parameter with `eval(typeof(equ).name.name)` (`src/problems/equation_problem.jl:82`) and
+  runs `check_methods` on every construction (`:79`). `ReducedComplexityModeling` only forwards
+  the call, so there is no local fix.
+- **Kind:** upstream
+- **Found:** 2026-10-11 (critic round 1c)
+
+### K10 · Dropping `x_reltol = eps(T)` leaves every test green
+
+- **Location:** `src/TrainingProblem.jl:60`, `Optim.Options(; g_abstol, x_reltol = eps(T))`.
+- **Evidence:** the mutant `Optim.Options(; g_abstol, x_reltol = eps(T))` →
+  `Optim.Options(; g_abstol)`, run with `run-tests.jl <repository> TrainingData/TrainingData.jl
+  TrainingProblem.jl`, passes 413 of 413, the same count as the unchanged options. No input on
+  which the two option sets differ is known: the 120 noisy fits of `train converges on noisy data`
+  meet their tolerance under both, and a loss with a kink at its minimiser,
+  `|a - 1/3| + (b - 1)²`, gives the same fit under both, so it may be an equivalent mutant.
+- **Kind:** not verified
+- **Found:** 2026-10-11 (critic round 1a)

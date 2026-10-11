@@ -9,6 +9,8 @@ if "core" in GROUPS
     @safetestset "Parameter" include("parameters/parameter.jl")
     @safetestset "Parameter samplers" include("parameters/parametersampler.jl")
     @safetestset "Parameter spaces" include("parameters/parameterspace.jl")
+    @safetestset "TrainingData" include("TrainingData/TrainingData.jl")
+    @safetestset "TrainingProblem" include("TrainingProblem.jl")
     @safetestset "MNIST utilities" include("data_loader/mnist_utils.jl")
     @safetestset "Data loader for a tensor" include("data_loader/draw_batch_for_tensor_test.jl")
     @safetestset "POD of the Lorenz system" include("integration/pod_lorenz.jl")
