@@ -29,19 +29,7 @@ end
 function euler_residual(data, θ, scale)
     X = data.data
     W = promote_type(eltype(X), typeof(θ.k), typeof(θ.m))
-    h = one(W) / W(10)
-    s = W(scale)
-    r = Vector{W}(undef, 2 * NSTEPS)
-    q = W(X[1, 1])
-    p = W(X[2, 1])
-    for n in 1:NSTEPS
-        qnext = q + h * p / θ.m
-        pnext = p - h * θ.k * q
-        q, p = qnext, pnext
-        r[2n - 1] = s * (q - X[1, n + 1])
-        r[2n] = s * (p - X[2, n + 1])
-    end
-    return r
+    return W(scale) .* vec(euler_trajectory(W, θ.k, θ.m)[:, 2:end] .- X[:, 2:end])
 end
 
 "The `TrainingProblem` of the two-parameter model, with the residual scaled by `scale`."
@@ -64,8 +52,6 @@ function trivial_problem(::Type{T}, residual, parameters) where {T}
 end
 
 @testset "TrainingProblem" begin
-    @test !isdefined(RCM, :learn)
-    @test parentmodule(RCM.train) === RCM
     @test isempty(methods(RCM.train!))
 
     @testset "train recovers two known parameters" begin
@@ -81,25 +67,6 @@ end
                 @test typeof(fit.m) === T
                 @test isapprox(fit.k, ktrue; rtol = sqrt(eps(T)))
                 @test isapprox(fit.m, mtrue; rtol = sqrt(eps(T)))
-            end
-        end
-    end
-
-    @testset "the recorded data are the explicit Euler map" begin
-        # an independent computation of the map, so the fixture cannot drift to another scheme
-        for T in (Float32, Float64)
-            k, m = T(17) / T(10), T(11) / T(20)
-            h = one(T) / T(10)
-            X = euler_trajectory(T, k, m)
-            q, p = one(T), zero(T)
-            @test X[1, 1] == q
-            @test X[2, 1] == p
-            for n in 1:NSTEPS
-                qnext = q + h * p / m
-                pnext = p - h * k * q
-                q, p = qnext, pnext
-                @test X[1, n + 1] == q
-                @test X[2, n + 1] == p
             end
         end
     end

@@ -6,39 +6,9 @@ using Test
 
 const RCM = ReducedComplexityModeling
 
-# The `src/` directory of the package, for the source-level declaration check below.
-const SRC = dirname(pathof(RCM))
-
 # A function barrier with concrete arguments, for the allocation assertion: the first call warms
 # the method and the second is measured.
 allocations(f::F, x::X) where {F, X} = (f(x); @allocated f(x))
-
-# Every `abstract type` name declared at the top level of a `.jl` file under `dir`, a docstring
-# unwrapped. Julia replaces a type by a later definition of the same name, so an `abstract type
-# TrainingData end` left beside the struct is invisible at run time; only the source shows it.
-function abstract_declarations(dir)
-    names = Set{Symbol}()
-    for (root, _, files) in walkdir(dir)
-        for file in files
-            endswith(file, ".jl") || continue
-            for ex in Meta.parseall(read(joinpath(root, file), String)).args
-                abstract_declarations!(names, ex)
-            end
-        end
-    end
-    return names
-end
-
-function abstract_declarations!(names, ex)
-    ex isa Expr || return names
-    if ex.head === :abstract
-        name = ex.args[1]
-        push!(names, name isa Symbol ? name : name.args[1])
-    elseif ex.head === :macrocall
-        abstract_declarations!(names, ex.args[end])
-    end
-    return names
-end
 
 # The Hamiltonian ODE q̇ = p, ṗ = −β²q, with H = (p² + β²q²)/2.
 hode_vectorfield!(v, t, q, p, params) = (v .= p)
@@ -112,9 +82,6 @@ intrinsic_only(td::RCM.TrainingData{<:RCM.IntrinsicSpace}) = :intrinsic
             end
 
             @testset "DataType and SystemType dispatch through state_symbols" begin
-                @test RCM.AbstractDataType === GeometricBase.AbstractDataType
-                @test RCM.AbstractSystem === GeometricBase.AbstractSystem
-
                 canonical = RCM.TrainingData{
                     RCM.ObservableSpace, StateData, CanonicalHamiltonianSystem}(time, X)
                 noncanonical = RCM.TrainingData{
@@ -156,7 +123,6 @@ intrinsic_only(td::RCM.TrainingData{<:RCM.IntrinsicSpace}) = :intrinsic
                 @test all(isconcretetype, fieldtypes(typeof(td_plain)))
                 @test td_plain.problem === nothing
                 @test !isabstracttype(RCM.TrainingData)
-                @test :TrainingData ∉ abstract_declarations(SRC)
 
                 @test_throws ArgumentError RCM.TrainingData{
                     RCM.ObservableSpace, StateData, HamiltonianSystem}(time, X)

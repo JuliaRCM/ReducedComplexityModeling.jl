@@ -35,39 +35,29 @@ reports that it did not converge, and a start at a stationary point ends the fit
 exception raised by `residual` propagates to the caller.
 """
 function train(problem::TrainingProblem, method::Optim.FirstOrderOptimizer)
-    residual = problem.residual
-    data = problem.data
-    parameters = problem.parameters
-
+    (; data, residual, parameters) = problem
     T = float(promote_type(map(eltype, values(columns(parameters.samples)))...))
 
-    loss(θ::NamedTuple) = sum(abs2, residual(data, θ))
+    loss(θ) = sum(abs2, residual(data, θ))
+    finite_loss(i) = (ℓ = loss(parameters(i)); isfinite(ℓ) ? ℓ : oftype(ℓ, Inf))
 
-    index = nothing
-    ℓmin = zero(T)
-    for i in eachindex(parameters)
-        ℓ = loss(parameters(i))
-        if isfinite(ℓ) && (index === nothing || ℓ < ℓmin)
-            ℓmin = ℓ
-            index = i
-        end
-    end
-    index === nothing && throw(ArgumentError(
+    ℓmin, index = findmin(finite_loss, eachindex(parameters))
+    isfinite(ℓmin) || throw(ArgumentError(
         "no sample of the parameter space gives a finite loss, so `train` has no starting point"))
 
-    result_type = NamedTuple{keys(parameters.parameters)}
-    N = length(parameters.parameters)
-    x₀ = collect(T, values(parameters(index)))
-
-    merit(x) = loss(result_type(ntuple(i -> x[i], Val(N))))
+    merit(x) = loss(astuple(parameters.parameters, x))
     gradient!(G, x) = ForwardDiff.gradient!(G, merit, x)
 
-    result = Optim.optimize(merit, gradient!, x₀, method,
+    result = Optim.optimize(
+        merit, gradient!, collect(T, values(parameters(index))), method,
         Optim.Options(g_abstol = zero(T), x_reltol = eps(T)))
     Optim.converged(result) || error("`train` did not converge: $result")
 
-    return result_type(ntuple(i -> Optim.minimizer(result)[i], Val(N)))
+    return astuple(parameters.parameters, Optim.minimizer(result))
 end
+
+# The `NamedTuple` with the keys of `parameters` and the entries of the vector `x`.
+astuple(::NamedTuple{K}, x) where {K} = NamedTuple{K}(ntuple(i -> x[i], Val(length(K))))
 
 """
     train!(model, problem::TrainingProblem, method)

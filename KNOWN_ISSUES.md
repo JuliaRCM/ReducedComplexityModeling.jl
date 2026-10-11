@@ -95,7 +95,7 @@
 
 ### K10 · Dropping `x_reltol = eps(T)` leaves every test green
 
-- **Location:** `src/TrainingProblem.jl:66`, `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))`.
+- **Location:** `src/TrainingProblem.jl:53`, `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))`.
 - **Evidence:** the mutant `Optim.Options(g_abstol = zero(T), x_reltol = eps(T))` →
   `Optim.Options(g_abstol = zero(T))`, run with `mutate.jl <worktree> --warm <list> --jobs 3
   TrainingData/TrainingData.jl TrainingProblem.jl`, prints `SURVIVED`, and no input on which the two
