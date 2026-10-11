@@ -1,6 +1,7 @@
 module ReducedComplexityModeling
 
 using ForwardDiff
+using GeometricBase: AbstractDataType, AbstractSystem
 using GeometricEquations
 using GeometricSolutions
 using HDF5
@@ -12,6 +13,7 @@ using TypedTables
 using KernelAbstractions
 using AbstractNeuralNetworks: QPT, QPTOAT, Chain, NeuralNetworkParameters, NeuralNetwork
 
+import GeometricBase: state_symbols
 import ChainRulesCore
 using ChainRulesCore: @thunk, Thunk
 
@@ -27,6 +29,9 @@ include("data_loader/mnist_utils.jl")
 include("data_loader/batch.jl")
 
 include("TrainingData/TrainingData.jl")
+
+export AbstractSolutionSpace, ObservableSpace, IntrinsicSpace, TrainingData
+
 include("Models/Models.jl")
 
 export Array
@@ -51,5 +56,9 @@ export ParameterSpace
 include("parameters/h5routines.jl")
 
 export h5save, h5load
+
+include("TrainingProblem.jl")
+
+export TrainingProblem, train, train!
 
 end

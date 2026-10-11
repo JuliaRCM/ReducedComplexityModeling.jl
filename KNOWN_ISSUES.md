@@ -50,3 +50,28 @@
   `@test`. `test/quality/jet.jl` takes the `Float32` type of its `split_and_flatten` lines from
   this call.
 - **Found:** 2026-09-28
+
+### K5 · `SystemType` is declared by the caller and cannot be inferred from a problem
+
+- **Location:** `src/TrainingData/TrainingData.jl:73`, the `SY <: AbstractSystem` parameter of
+  `TrainingData`.
+- **Evidence:** `hashamiltonian` and `haslagrangian` of `GeometricEquations` separate a
+  Hamiltonian problem from a Lagrangian one and nothing finer:
+
+      julia --startup-file=no --project=. -e '
+      using GeometricEquations
+      v!(v, t, q, p, params) = (v .= p)
+      f!(f, t, q, p, params) = (f .= -q)
+      h(t, q, p, params) = sum(abs2, p) / 2 + sum(abs2, q) / 2
+      prob = HODEProblem(v!, f!, h, (0.0, 1.0), 0.1, [1.0], [0.0])
+      println((hashamiltonian(prob), haslagrangian(prob)))'
+      (true, false)
+
+  Their methods are one per equation type — `Tuple{typeof(hashamiltonian), HODE}`,
+  `Tuple{typeof(hashamiltonian), HDAE}` and the `GeometricEquation` and `GeometricProblem`
+  fallbacks, and `haslagrangian` for `LODE` and `LDAE` — so nothing separates a canonical from a
+  noncanonical or Poisson system, nor a regular from a degenerate Lagrangian one. A
+  `TrainingData` therefore takes its `SystemType` from the caller, and data that never came from
+  a problem have no trait to read at all.
+- **Kind:** upstream
+- **Found:** 2026-10-10
