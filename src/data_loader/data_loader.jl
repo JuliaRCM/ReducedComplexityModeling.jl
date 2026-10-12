@@ -516,7 +516,7 @@ Compute the accuracy of a neural network classifier.
 This needs an instance of [`DataLoader`](@ref) that stores the *test data*.
 """
 function accuracy(model::Chain,
-        ps::NeuralNetworkParameters,
+        ps::NetworkParameters,
         dl::DataLoader{T, AT, BT}) where {
         T, T1 <: Integer, AT <: AbstractArray{T}, BT <: AbstractArray{T1}}
     output_tensor = model(dl.input, ps)
@@ -535,7 +535,7 @@ end
 
 Compute the accuracy of a neural network classifier.
 
-This is like [`accuracy(::Chain, ::Tuple, ::DataLoader)`](@ref), but for a `NeuralNetwork`.
+This is like [`accuracy(::Chain, ::NetworkParameters, ::DataLoader)`](@ref), but for a `NeuralNetwork`.
 """
 accuracy(nn::NeuralNetwork, dl::DataLoader) = accuracy(nn.model, params(nn), dl)
 

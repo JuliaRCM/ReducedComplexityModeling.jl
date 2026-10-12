@@ -35,17 +35,17 @@
 ### K3 · `test_onehotbatch` checks one column, at an index off by one
 
 - **Kind:** defect
-- **Location:** `test/data_loader/mnist_utils.jl:50`
+- **Location:** `test/data_loader/mnist_utils.jl:49`
 - **Evidence:** `zip(length(V), V)` gives the one pair `(4, 1)` for `V = [1, 2, 5, 0]`, so the loop
   checks only column 4. `onehotbatch` maps `i` to row `i + 1`, but the test reads
-  `V_encoded[v, 1, i]` (`:52`); the check passes only because `V[4] = 0`. The fix is
+  `V_encoded[v, 1, i]` (`:51`); the check passes only because `V[4] = 0`. The fix is
   `for (i, v) in enumerate(V)` with `V_encoded[v + 1, 1, i]`.
 - **Found:** 2026-09-28
 
 ### K4 · `test_dummy_mnist` asserts nothing
 
 - **Kind:** missing test
-- **Location:** `test/data_loader/mnist_utils.jl:71`
+- **Location:** `test/data_loader/mnist_utils.jl:70`
 - **Evidence:** the function builds a `DataLoader` and ends with `@warn "缺少test"`; it has no
   `@test`. `test/quality/jet.jl` takes the `Float32` type of its `split_and_flatten` lines from
   this call.
@@ -104,3 +104,30 @@
   `|a - 1/3| + (b - 1)²`, gives the same fit under both, so it may be an equivalent mutant.
 - **Kind:** not verified
 - **Found:** 2026-10-11 (critic round 1a)
+
+### K12 · `accuracy(::NeuralNetwork, ::DataLoader)` calls an undefined `params`
+
+- **Location:** `src/data_loader/data_loader.jl:540`, the method
+  `accuracy(nn::NeuralNetwork, dl::DataLoader) = accuracy(nn.model, params(nn), dl)`.
+- **Evidence:** `params` is defined neither by this package nor by `Base`.
+  `isdefined(ReducedComplexityModeling, :params)` is `false` in an environment with
+  AbstractNeuralNetworks 0.8.0 and in one with 0.6.4, since the module imports only `Chain` and
+  `NeuralNetwork` from it, and `isdefined(Base, :params)` is `false` on Julia 1.10, 1.11, 1.12 and
+  1.13. The call therefore raises `UndefVarError: params not defined in ReducedComplexityModeling`.
+  No test reaches the method and `accuracy` is not exported, so the suite passes.
+- **Kind:** defect
+- **Found:** 2026-10-11 (merge base `3b0554e`)
+
+### K13 · Explicit import checks report implicit and non-public dependency accesses
+
+- **Location:** `src/ReducedComplexityModeling.jl:4`, the dependency imports, and their uses in
+  included source files.
+- **Evidence:** on Julia 1.13.1, ExplicitImports 1.15.0,
+  `print_explicit_imports(ReducedComplexityModeling; report_non_public = true)` reports 31
+  implicitly imported names, 3 non-public explicit imports (`AbstractDataType`, `AbstractSystem`,
+  `H5DataStore`), and 9 non-public qualified accesses.
+  `test_explicit_imports(ReducedComplexityModeling)` fails the implicit-import, public-import and
+  public-qualified-access checks. The import statements are present at merge base `3b0554e`;
+  the `Chain` and `NeuralNetwork` imports have no diagnostic.
+- **Kind:** defect
+- **Found:** 2026-10-11 (pre-PR verification of `compat/ann-0.8`)
