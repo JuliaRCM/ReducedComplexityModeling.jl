@@ -12,6 +12,7 @@ using Optim
 using TypedTables
 using KernelAbstractions
 using AbstractNeuralNetworks: Chain, NeuralNetwork
+using NeuralNetworkParameters: NetworkParameters
 
 # DataLoader dispatches on (q, p) pairs of arrays with matching types, or on a single array.
 const QPT{T} = NamedTuple{(:q, :p), Tuple{AT, AT}} where {T, AT <: AbstractArray{T}}

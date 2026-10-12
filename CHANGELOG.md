@@ -15,18 +15,20 @@ written.
 
 ## [Unreleased]
 
-### Changed
+### Breaking Changes
 
-- `[compat] AbstractNeuralNetworks` admits 0.8 as well as 0.6. This is what makes the package
-  installable in an environment with `GeometricOptimizers` 0.7 or 0.8, both of which require
-  AbstractNeuralNetworks 0.8, and therefore usable by `SparseIdentification`. The wider bound alone
-  does not load the package: AbstractNeuralNetworks 0.7 removed `QPT`, `QPTOAT` and
-  `NeuralNetworkParameters`, which this package used only as dispatch annotations in the
-  data-loader fork, so it now defines `QPT` and `QPTOAT` itself, copied from
-  AbstractNeuralNetworks 0.6.4, imports only `Chain` and `NeuralNetwork`, and leaves the `ps`
-  argument of `accuracy` untyped. `0.6` stays in the union, so that a Julia 1.10 environment, this
-  package's floor, still resolves AbstractNeuralNetworks 0.6.4; the 0.7 releases are left out of
-  the union. No data format, result or public name changes.
+- `[compat] AbstractNeuralNetworks` is `"0.8"` alone, and `julia` is `"1.11"`. AbstractNeuralNetworks
+  0.8 requires Julia 1.11, so a Julia 1.10 environment no longer resolves this package; 0.2.0 is the
+  last release that loads there. The bound is what makes the package installable beside
+  `GeometricOptimizers` 0.7 or 0.8, both of which require AbstractNeuralNetworks 0.8, and therefore
+  usable by `SparseIdentification`.
+- `accuracy(::Chain, ps, ::DataLoader)` types `ps` as `NetworkParameters`, so a caller that passes
+  anything else gets a `MethodError` at the call rather than a failure deeper in. `NeuralNetworkParameters`
+  joins `[deps]`, because AbstractNeuralNetworks 0.7 moved the parameters type into that package and
+  0.8 imports it without exporting it. That release also removed `QPT` and `QPTOAT`, which this
+  package used only as dispatch annotations in the data-loader fork, so it now defines both itself,
+  copied from AbstractNeuralNetworks 0.6.4, and imports only `Chain` and `NeuralNetwork`. No data
+  format, result or public name changes.
 
 ## [0.2.0] — 2026-10-11
 
