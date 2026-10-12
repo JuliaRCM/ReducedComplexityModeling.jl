@@ -20,7 +20,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 TypedTables = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
 
 [compat]
-AbstractNeuralNetworks = "0.8"
+AbstractNeuralNetworks = "0.8, 0.9"
 ChainRulesCore = "1.26"
 ForwardDiff = "0.10, 1"
 GeometricBase = "0.14.6, 0.15"
