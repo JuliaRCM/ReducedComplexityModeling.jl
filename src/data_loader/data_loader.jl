@@ -209,7 +209,7 @@ There are two keyword arguments:
 - `suppress_info = false`.
 
 For the example of the MNIST data set all images are of size ``49\times49``.
-For `patch_length = 7` the image is therefore split into 16 ``7\times7`` patches [brantner2023generalizing](@cite).
+For `patch_length = 7` the image is therefore split into 16 ``7\times7`` patches [Brantner:2023](@cite).
 """
 function DataLoader(data::AbstractArray{T, 3}, target::AbstractVector{T1};
         patch_length = 7,
