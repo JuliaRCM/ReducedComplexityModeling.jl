@@ -13,6 +13,15 @@ because a changelog assembled after the fact loses exactly the reasoning that ma
 keeping. The `[Unreleased]` target below is provisional — confirm it when the first entry is
 written.
 
+## [Unreleased] — targeting 0.4.0
+
+### Breaking Changes
+
+- **Julia 1.12 is the floor** (`[compat] julia = "1.12"`, from 1.11). A breaking change under
+  this package's pre-1.0 convention: a caller on Julia 1.11 can no longer install this version.
+  The repository records no reason for the raise, and nothing in the package's code changes: it
+  held no workaround that existed only for Julia 1.11.
+
 ## [0.3.0] — 2026-10-12
 
 ### Breaking Changes
