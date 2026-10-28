@@ -45,6 +45,10 @@ holds the changes since the last release until that release is cut.
   `AssertionError`, so a caller that catches that type must catch `ArgumentError` now.
 - `accuracy` returns `float(T)`, the element type of the loader's input, where the fork returned
   `Float64` whatever the loader held.
+- `accuracy` counts one error per wrong label for an output of any integer type, unsigned ones
+  included, and divides by every labelled column: the output's time steps times its parameter axis.
+  A loader that `DataLoader(input, output)` builds from a matrix or a vector has one parameter
+  axis entry and many time steps, so its accuracy is a fraction in `[0, 1]`.
 - `accuracy(::NeuralNetwork, ::DataLoader)` works: `params` is imported from
   AbstractNeuralNetworks, which closes known issue K12. Known issues K2, K3 and K4 leave
   `KNOWN_ISSUES.md` with the code they described.

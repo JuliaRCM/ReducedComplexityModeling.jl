@@ -173,3 +173,50 @@ end
     _, back = Zygote.pullback(crop, x)
     @test eltype(only(back(ones(Float64, 3, 2, 4)))) === T
 end
+
+# The difference between the target and the prediction is taken in the target's integer type, which
+# wraps for an unsigned one: `UInt8(0) - UInt8(1) == 0xff`. One wrong label is two entries that
+# differ by 1, whatever the integer type of the target.
+@testset "a target of any integer type counts one error per wrong label ($T1)" for T1 in (UInt8, UInt16,
+    UInt64, Int8, Int64, Bool)
+    classes = copy(predicted)
+    classes[1] = rotated[1]
+    dl = classification_loader(classes)
+    dl_T1 = DataLoader(dl.input, T1.(dl.output); suppress_info = true)
+    a = ReducedComplexityModeling.accuracy(model, ps, dl_T1)
+    @test a isa Float32
+    @test a ≈ Float32(n_params - 1) / Float32(n_params)
+    @test a == ReducedComplexityModeling.accuracy(model, ps, dl)
+
+    all_wrong = DataLoader(dl.input, T1.(classification_loader(rotated).output);
+        suppress_info = true)
+    @test iszero(ReducedComplexityModeling.accuracy(model, ps, all_wrong))
+end
+
+# `DataLoader(input, output)` for matrices reshapes the output to `(classes, time_steps, 1)`, so the
+# parameter axis has length one and the labelled columns are the time steps. The fraction counts
+# every one of them.
+@testset "a matrix loader counts every labelled column ($T)" for T in REAL_ELTYPES
+    seq_input = rand(T, input_dim, 5)
+    estimate = ReducedComplexityModeling.assign_output_estimate(
+        model(reshape(seq_input, input_dim, 5, 1), ps), 5)
+    labels = [argmax(estimate[:, k, 1]) for k in 1:5]
+    function matrix_loader(classes)
+        output = zeros(Int64, n_classes, 5)
+        for (k, c) in pairs(classes)
+            output[c, k] = 1
+        end
+        DataLoader(seq_input, output; suppress_info = true)
+    end
+    @test ReducedComplexityModeling.accuracy(model, ps, matrix_loader(labels)) == 1
+
+    wrong = copy(labels)
+    for k in (1, 3, 4)
+        wrong[k] = mod1(labels[k] + 1, n_classes)
+    end
+    a = ReducedComplexityModeling.accuracy(model, ps, matrix_loader(wrong))
+    @test a isa T
+    @test a ≈ T(2) / T(5)
+    @test iszero(ReducedComplexityModeling.accuracy(model, ps,
+        matrix_loader(mod1.(labels .+ 1, n_classes))))
+end

@@ -427,9 +427,12 @@ function accuracy(model::Chain,
     # entries of its one-hot column and a sample that carries no label differs in one, so half the
     # difference is the number of errors. The fraction is then read in `float(T)`, for `T` the
     # element type of the loader's input; reading it in the output's would widen a `Float32`
-    # loader's result, and reading it in an integer `T` fails on a half error.
-    n = size(dl.output, 3)
-    errors = sum(abs.(dl.output - tensor_of_maximum_elements)) / 2
+    # loader's result, and reading it in an integer `T` fails on a half error. The difference is
+    # `max - min`, which does not wrap for an unsigned `T1`, and the count spans every labelled
+    # column: the time steps of the output times its parameter axis.
+    n = dl.output_time_steps * size(dl.output, 3)
+    errors = sum(max.(dl.output, tensor_of_maximum_elements) .-
+                 min.(dl.output, tensor_of_maximum_elements)) / 2
     F = float(T)
     F(n - errors) / F(n)
 end
