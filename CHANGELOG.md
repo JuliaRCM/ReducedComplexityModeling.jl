@@ -32,10 +32,10 @@ release is cut.
   `KNOWN_ISSUES.md` with the code they described.
 - `ChainRulesCore` leaves `[deps]` and `[compat]`: the fork's `rrule` for `assign_output_estimate`
   was its only use.
-- `[compat] AbstractNeuralNetworks` rises to `"0.9.1"` and `NeuralNetworkParameters` to `"0.5"`,
-  the bounds that resolve beside GeometricMachineLearning 0.9, whose types the moved code
-  dispatches on. An environment on an earlier AbstractNeuralNetworks no longer resolves this
-  release.
+- `[compat] AbstractNeuralNetworks` rises to `"0.9.1"` and `NeuralNetworkParameters` to `"0.5"`.
+  The moved code calls `networkbackend`, `params`, `NamedTupleOfArrays` and `ArrayOrNamedTuple`,
+  which AbstractNeuralNetworks 0.9 defines, so an environment on an earlier
+  AbstractNeuralNetworks no longer resolves this release.
 
 ## [0.3.1] — 2026-10-24
 
