@@ -84,11 +84,17 @@
 - **Location:** `src/data_loader/batch.jl`, `gather` and `gather_kernel!`, reached through
   `convert_input_and_batch_indices_to_array`; no test runs either on a `JLArray`.
 - **Evidence:** `grep -rn 'JLArray\|JLArrays\|GPUArraysCore' test/ Project.toml test/Project.toml`
-  finds no hit, so the test environment carries neither package. The code itself is device-clean
-  when probed: critic round 1a's `probe_names_device.jl` passes 57 of 57 assertions in each
-  precision under `allowscalar(false)`, on a tensor loader, a `(q, p)` loader and an
-  `autoencoder = true` one. The device tests of GeometricMachineLearning train a network of that
-  package, so no testset of them moves here with the loader.
+  finds no hit, so the test environment carries neither package. The code itself is device-clean.
+  `julia --startup-file=no` on a script that opens a temporary environment — `Pkg.activate(;
+  temp = true)`, `Pkg.develop(Pkg.PackageSpec(path = "."))`, `Pkg.add(["JLArrays",
+  "GPUArraysCore", "KernelAbstractions"])` — then calls
+  `convert_input_and_batch_indices_to_array` under `allowscalar(false)` passes 57 of 57 assertions
+  in `Float32` and 57 of 57 in `Float64` (2026-10-28), on a tensor loader, a `(q, p)` loader and an
+  `autoencoder = true` one: every drawn batch's input and target is a `JLArray{T, 3}` that holds
+  the source tensor's entries, `networkbackend` is a `JLBackend`, and the conversions to `CPU()`
+  and to the other precision return the element type they name. The device tests of
+  GeometricMachineLearning train a network of that package, so no testset of them moves here with
+  the loader.
 - **Kind:** missing test
 - **Found:** 2026-10-28 (critic round 1a)
 

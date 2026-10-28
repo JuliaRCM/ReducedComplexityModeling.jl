@@ -28,9 +28,9 @@ holds the changes since the last release until that release is cut.
   it; MNIST data and the patch utilities are `GMLDatasets`'. `test/data_loader/mnist_utils.jl` is
   deleted with them. `DataLoader` and `Batch` are this package's exported names, `Batch` new to
   `export DataLoader`; `number_of_batches`, `assign_output_estimate`,
-  `convert_input_and_batch_indices_to_array`, `accuracy` and `ParametricDataLoader` are its
-  unexported ones, and `ParametricDataLoader` is `public`: a caller writes
-  `ReducedComplexityModeling.ParametricDataLoader`.
+  `convert_input_and_batch_indices_to_array`, `batch_over_two_axes`, `accuracy` and
+  `ParametricDataLoader` are its unexported ones, and `ParametricDataLoader` is `public`: a
+  caller writes `ReducedComplexityModeling.ParametricDataLoader`.
 - `accuracy(::NeuralNetwork, ::DataLoader)` works: `params` is imported from
   AbstractNeuralNetworks, which closes known issue K12. Known issues K2, K3 and K4 leave
   `KNOWN_ISSUES.md` with the code they described.
