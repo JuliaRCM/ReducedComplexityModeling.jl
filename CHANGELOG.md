@@ -26,10 +26,9 @@ holds the changes since the last release until that release is cut.
   `src/data_loader/matrix_assign.jl` and `src/data_loader/mnist_utils.jl` are
   deleted with no successor here: `matrix_assign.jl` held `draw_batch!` alone, and no code called
   it; MNIST data and the patch utilities are `GMLDatasets`'. `test/data_loader/mnist_utils.jl` is
-  deleted with them. `DataLoader` and `Batch` are this package's exported names, `Batch` new to
-  `export DataLoader`; `number_of_batches`, `assign_output_estimate`,
-  `convert_input_and_batch_indices_to_array`, `batch_over_two_axes`, `accuracy` and
-  `ParametricDataLoader` are its unexported ones, and `ParametricDataLoader` is `public`: a
+  deleted with them. `Batch` is now exported next to `DataLoader`; `number_of_batches`,
+  `assign_output_estimate`, `convert_input_and_batch_indices_to_array`, `batch_over_two_axes`,
+  `accuracy` and `ParametricDataLoader` are unexported, and `ParametricDataLoader` is `public`: a
   caller writes `ReducedComplexityModeling.ParametricDataLoader`.
 - **A matrix or a vector is a time series by default.** `DataLoader(::AbstractMatrix)` and
   `DataLoader(::AbstractVector)` default `autoencoder = false`, where the fork defaulted it to
