@@ -3,22 +3,22 @@
 
 Crop the output to get the correct number of output vectors.
 
-The function `assign_output_estimate` is closely related to the [`Transformer`](@ref). 
+The function `assign_output_estimate` is closely related to the [`Transformer`](@ref).
 It takes the last `prediction_window` columns of the output and uses them for the prediction.
 
 i.e.
 ```math
-\mathbb{R}^{N\times{}T}\to\mathbb{R}^{N\times\mathtt{pw}}, 
-\begin{bmatrix} 
-    z^{(1)}_1               & \cdots & z^{(T)}_1 \\ 
-    \cdots                  & \cdots & \cdots    \\ 
+\mathbb{R}^{N\times{}T}\to\mathbb{R}^{N\times\mathtt{pw}},
+\begin{bmatrix}
+    z^{(1)}_1               & \cdots & z^{(T)}_1 \\
+    \cdots                  & \cdots & \cdots    \\
     z^{(1)}_n               & \cdots & z^{(T)}_n
-    \end{bmatrix} \mapsto 
-    \begin{bmatrix} 
-    z^{(T - \mathtt{pw} + 1)}_1 & \cdots      & z^{(T)}_1 \\ 
-    \cdots                  & \cdots      & \cdots \\ 
-    z^{(T - \mathtt{pw} + 1)}_n & \cdots      & z^{(T)}_n\end{bmatrix}     
-``` 
+    \end{bmatrix} \mapsto
+    \begin{bmatrix}
+    z^{(T - \mathtt{pw} + 1)}_1 & \cdots      & z^{(T)}_1 \\
+    \cdots                  & \cdots      & \cdots \\
+    z^{(T - \mathtt{pw} + 1)}_n & \cdots      & z^{(T)}_n\end{bmatrix}
+```
 
 If `prediction_window` is equal to `sequence_length`, then this is not needed.
 """

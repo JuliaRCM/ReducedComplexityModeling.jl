@@ -76,8 +76,8 @@ end
                 target_modules = RCM)))
         end
         # the `Batch` functor under `@allocated` in test/data_loader/batch_index_set.jl, and at the
-        # element types its other direct calls make: `Int` in test/data_loader/batch_functor.jl and
-        # in the doctest of the launcher above
+        # element types its other direct calls make: `Int` in test/data_loader/batch_functor.jl, and
+        # the `:TimeSeries` `Int` of the doctest of `number_of_batches` above
         @test isempty(JET.get_reports(JET.report_opt(Batch(8),
             (DataLoader{Float32, A3{Float32}, Nothing, :TimeSeries, Nothing},);
             target_modules = RCM)))

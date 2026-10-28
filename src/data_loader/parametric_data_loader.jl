@@ -20,10 +20,10 @@ gives its `q` and `p` and the parameters of its problem.
 A `Batch(batch_size)` draws, in one epoch, each pair of a start position and a trajectory once, in
 minibatches of `batch_size`; the last minibatch is shorter. A drawn minibatch is the triple
 `(input, output, μs)`: the state at the start position, the state one time step later, and the
-``\mu`` of each sample. [`train!`](@ref) on a `ParametricDataLoader` trains on `ParametricLoss()`
-when no `loss` is given, so the network is applied with `apply_parametric`, one time step per
-sample. A `Batch` with a sequence length or a prediction window other than one is an
-`ArgumentError`.
+``\mu`` of each sample. GeometricMachineLearning's [`train!`](@ref) method for a
+`ParametricDataLoader` trains on `ParametricLoss()` when no `loss` is given, so the network is
+applied with `apply_parametric`, one time step per sample. A `Batch` with a sequence length or a
+prediction window other than one is an `ArgumentError`.
 
 A problem without system parameters is trained with a [`DataLoader`](@ref).
 """

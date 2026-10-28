@@ -1,13 +1,13 @@
 @doc raw"""
     Batch
 
-`Batch` is a struct whose functor acts on an instance of `DataLoader` to produce a sequence of training samples for training for one epoch. 
+`Batch` is a struct whose functor acts on an instance of `DataLoader` to produce a sequence of training samples for training for one epoch.
 
 See [`Batch(::Int)`](@ref) and [`Batch(::Int, ::Int, ::Int)`](@ref) for the different constructors.
 
-# The functor 
+# The functor
 
-An instance of `Batch` can be called on an instance of `DataLoader` to produce a sequence of samples that contain all the input data, i.e. for training for one epoch. 
+An instance of `Batch` can be called on an instance of `DataLoader` to produce a sequence of samples that contain all the input data, i.e. for training for one epoch.
 
 The output of applying `batch:Batch` to `dl::DataLoader` is a vector of vectors of integers. Each of these vectors contains two integers: the first is the *time index* and the second one is the *parameter index*.
 
@@ -39,7 +39,7 @@ true
 true
 ```
 
-Here the first index is always 1 (the time dimension). We get a total number of 3 batches. 
+Here the first index is always 1 (the time dimension). We get a total number of 3 batches.
 The last batch is only of size 1 because we *sample without replacement*.
 Also see the docstring for [`DataLoader(::AbstractVector)`](@ref).
 """
