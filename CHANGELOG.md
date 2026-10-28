@@ -6,12 +6,65 @@ This package is pre-1.0, so *every* minor release is potentially breaking in the
 [SemVer](https://semver.org) for `0.x` versions. The sections below name what actually
 changed, so that a compat-only bump can be told apart from a rename or a change in results.
 
-This file was started on 2026-08-31 and deliberately holds no entries. 2 versions were
-released before it, the most recent `v0.1.1`, and neither is written up here: the record of
-that history is `git log` and the tags. It is named as a gap rather than reconstructed,
-because a changelog assembled after the fact loses exactly the reasoning that makes it worth
-keeping. The `[Unreleased]` target below is provisional — confirm it when the first entry is
-written.
+This file was started on 2026-08-31. 2 versions were released before it, the most recent
+`v0.1.1`, and neither is written up here: the record of that history is `git log` and the
+tags. It is named as a gap rather than reconstructed, because a changelog assembled after the
+fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
+holds the changes since the last release until that release is cut.
+
+## [Unreleased]
+
+### Breaking Changes
+
+- **The data loader is this package's now: its code arrives from GeometricMachineLearning.**
+  `src/data_loader/data_loader.jl`, `src/data_loader/batch.jl`,
+  `src/data_loader/tensor_assign.jl` and `src/data_loader/parametric_data_loader.jl` are
+  GeometricMachineLearning's files of those names, moved here, with the testsets that exercise
+  them; GeometricMachineLearning removes its copies of all four. This package's own
+  `data_loader.jl`, `batch.jl`, `tensor_assign.jl` and
+  `test/data_loader/draw_batch_for_tensor_test.jl` give way to them.
+  `src/data_loader/matrix_assign.jl` and `src/data_loader/mnist_utils.jl` are
+  deleted with no successor here: `matrix_assign.jl` held `draw_batch!` alone, and no code called
+  it; MNIST data and the patch utilities are `GMLDatasets`'. `test/data_loader/mnist_utils.jl` is
+  deleted with them. `Batch` is now exported next to `DataLoader`; `number_of_batches`,
+  `assign_output_estimate`, `convert_input_and_batch_indices_to_array`, `batch_over_two_axes`,
+  `accuracy` and `ParametricDataLoader` are unexported, and `ParametricDataLoader` is `public`: a
+  caller writes `ReducedComplexityModeling.ParametricDataLoader`.
+- **A matrix or a vector is a time series by default.** `DataLoader(::AbstractMatrix)` and
+  `DataLoader(::AbstractVector)` default `autoencoder = false`, where the fork defaulted it to
+  `true`: `DataLoader(data)` reads the second axis as the number of time steps, and a set of
+  samples is `DataLoader(data; autoencoder = true)`. `DataLoader(solution)` takes `suppress_info`
+  as a keyword, so `DataLoader(solution, true)` raises a `MethodError`.
+- **`DataLoader(tensor, labels::AbstractVector)` is gone.** That method preprocessed images for
+  MNIST, with `patch_length = 7`; patch the images and build the one-hot target with `GMLDatasets`
+  first, then call `DataLoader(input, output)`, whose output may be an integer array for a tensor,
+  a matrix or a vector input. The fork's pairs took one element type for both arguments, whatever
+  the shape, so an integer output with a real input was a `MethodError` there.
+- **A sample-count mismatch in `DataLoader(input, output)` throws `ArgumentError`.** The third axes
+  of input and output must agree, and the message names both sizes. The fork's `@assert` threw
+  `AssertionError`, so a caller that catches that type must catch `ArgumentError` now.
+- `accuracy` returns `float(T)`, the element type of the loader's input, where the fork returned
+  `Float64` whatever the loader held.
+- `accuracy` counts one error per wrong label for an output of any integer type, unsigned ones
+  included, and divides by every labelled column: the output's time steps times its parameter axis.
+  A loader that `DataLoader(input, output)` builds from a matrix or a vector has one parameter
+  axis entry and many time steps, so its accuracy is a fraction in `[0, 1]`.
+- `accuracy(::NeuralNetwork, ::DataLoader)` works: `params` is imported from
+  AbstractNeuralNetworks, which closes known issue K12. Known issues K2, K3 and K4 leave
+  `KNOWN_ISSUES.md` with the code they described.
+- `ChainRulesCore` leaves `[deps]` and `[compat]`: the fork's `rrule` for `assign_output_estimate`
+  was its only use.
+- `[compat]`: `AbstractNeuralNetworks` rises to `"0.9.1"`, `NeuralNetworkParameters` to `"0.5"`,
+  `GeometricBase` narrows from `"0.14.6, 0.15"` to `"0.15"`, `GeometricEquations` rises from
+  `"0.21"` to `"0.21.5"`, and `GeometricSolutions` from `"0.6"` to `"0.6.6"`.
+  The moved code calls `networkbackend`, `params`, `NamedTupleOfArrays` and `ArrayOrNamedTuple`,
+  which AbstractNeuralNetworks 0.9 defines, so an environment on an earlier
+  AbstractNeuralNetworks no longer resolves this release. AbstractNeuralNetworks 0.9.0 caps
+  `NeuralNetworkParameters` at 0.4, and 0.9.1 is the first to allow 0.5. `NeuralNetworkParameters`
+  0.5 requires `GeometricBase` 0.15, and `GeometricEquations` 0.21.5 and `GeometricSolutions` 0.6.6
+  are the first releases that accept `GeometricBase` 0.15, so the old floors could not be resolved
+  alongside it. An environment on `GeometricBase` 0.14 therefore no longer resolves this release,
+  where v0.3.1 allowed it.
 
 ## [0.3.1] — 2026-10-24
 

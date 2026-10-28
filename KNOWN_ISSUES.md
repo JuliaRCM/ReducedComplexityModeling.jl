@@ -11,46 +11,6 @@
   gives none. The test totals do not change: every testset passes, and JET passes 9 of 9.
 - **Found:** 2026-09-28
 
-### K2 · The JET launcher lines do not see a dispatch on an argument of a kernel launch
-
-- **Kind:** missing test
-- **Location:** `test/quality/jet.jl`, the `report_opt` lines of
-  `convert_input_and_batch_indices_to_array`, `onehotbatch` and `split_and_flatten`.
-- **Evidence:** a runtime dispatch on an argument of a KernelAbstractions call or of a kernel
-  launch sits in a KernelAbstractions frame, which `target_modules = (ReducedComplexityModeling,)`
-  filters out; `JET.AnyFrameModule` through a launcher reports on KernelAbstractions' own
-  machinery for a clean kernel, so the lines do not use it. Mutants that survive:
-  `Base.inferencebarrier(dl.input)` as a kernel argument in `src/data_loader/batch.jl:372`;
-  `Base.inferencebarrier(batch.seq_length)` into the output launch; a barrier on `length(target)`
-  in `zeros(...)` and on `target` in `assign_val!` of `onehotbatch`; a barrier in
-  `allocate(... size(input, 3))`. A barrier on a value that the launcher's own frame uses
-  (`length(batch_indices_tuple)`, `q_input`) gives 1–2 reports. Reproducer:
-  `mutate.jl <repository> src/data_loader/mnist_utils.jl 'assign_val!(output, target, ndrange =
-  length(target))' 'assign_val!(output, Base.inferencebarrier(target), ndrange = length(target))'
-  quality/jet.jl` prints `SURVIVED — no unit sees the mutant` (`selected | 9 9`). The kernel
-  bodies are checked by the `cpu_<kernel>` lines, which analyse only the `NoDynamicCheck` context;
-  the `DynamicCheck` variant has the same body.
-- **Found:** 2026-09-28
-
-### K3 · `test_onehotbatch` checks one column, at an index off by one
-
-- **Kind:** defect
-- **Location:** `test/data_loader/mnist_utils.jl:49`
-- **Evidence:** `zip(length(V), V)` gives the one pair `(4, 1)` for `V = [1, 2, 5, 0]`, so the loop
-  checks only column 4. `onehotbatch` maps `i` to row `i + 1`, but the test reads
-  `V_encoded[v, 1, i]` (`:51`); the check passes only because `V[4] = 0`. The fix is
-  `for (i, v) in enumerate(V)` with `V_encoded[v + 1, 1, i]`.
-- **Found:** 2026-09-28
-
-### K4 · `test_dummy_mnist` asserts nothing
-
-- **Kind:** missing test
-- **Location:** `test/data_loader/mnist_utils.jl:70`
-- **Evidence:** the function builds a `DataLoader` and ends with `@warn "缺少test"`; it has no
-  `@test`. `test/quality/jet.jl` takes the `Float32` type of its `split_and_flatten` lines from
-  this call.
-- **Found:** 2026-09-28
-
 ### K5 · `SystemType` is declared by the caller and cannot be inferred from a problem
 
 - **Location:** `src/TrainingData/TrainingData.jl:82`, the `SY <: AbstractSystem` parameter of the
@@ -105,29 +65,49 @@
 - **Kind:** not verified
 - **Found:** 2026-10-11 (critic round 1a)
 
-### K12 · `accuracy(::NeuralNetwork, ::DataLoader)` calls an undefined `params`
-
-- **Location:** `src/data_loader/data_loader.jl:540`, the method
-  `accuracy(nn::NeuralNetwork, dl::DataLoader) = accuracy(nn.model, params(nn), dl)`.
-- **Evidence:** `params` is defined neither by this package nor by `Base`.
-  `isdefined(ReducedComplexityModeling, :params)` is `false` in an environment with
-  AbstractNeuralNetworks 0.8.0 and in one with 0.6.4, since the module imports only `Chain` and
-  `NeuralNetwork` from it, and `isdefined(Base, :params)` is `false` on Julia 1.10, 1.11, 1.12 and
-  1.13. The call therefore raises `UndefVarError: params not defined in ReducedComplexityModeling`.
-  No test reaches the method and `accuracy` is not exported, so the suite passes.
-- **Kind:** defect
-- **Found:** 2026-10-11 (merge base `3b0554e`)
-
 ### K13 · Explicit import checks report implicit and non-public dependency accesses
 
 - **Location:** `src/ReducedComplexityModeling.jl:4`, the dependency imports, and their uses in
   included source files.
-- **Evidence:** on Julia 1.13.1, ExplicitImports 1.15.0,
-  `print_explicit_imports(ReducedComplexityModeling; report_non_public = true)` reports 31
-  implicitly imported names, 3 non-public explicit imports (`AbstractDataType`, `AbstractSystem`,
-  `H5DataStore`), and 9 non-public qualified accesses.
+- **Evidence:** on Julia 1.13.3, ExplicitImports 1.15.0,
+  `print_explicit_imports(ReducedComplexityModeling; report_non_public = true)` reports 25
+  implicitly imported names, 5 non-public explicit imports (`AbstractDataType`, `AbstractSystem`,
+  `ArrayOrNamedTuple`, `H5DataStore`, `NamedTupleOfArrays`), and 8 non-public qualified accesses.
   `test_explicit_imports(ReducedComplexityModeling)` fails the implicit-import, public-import and
-  public-qualified-access checks. The import statements are present at merge base `3b0554e`;
-  the `Chain` and `NeuralNetwork` imports have no diagnostic.
+  public-qualified-access checks. `ArrayOrNamedTuple` and `NamedTupleOfArrays` are imported at
+  `src/ReducedComplexityModeling.jl:26`, for the data loader's dispatch; the other import
+  statements are present at merge base `3b0554e`. The `Chain` and `NeuralNetwork` imports have no
+  diagnostic.
 - **Kind:** defect
 - **Found:** 2026-10-11 (pre-PR verification of `compat/ann-0.8`)
+
+### K14 · The loader's gather kernel has no device test
+
+- **Location:** `src/data_loader/batch.jl`, `gather` and `gather_kernel!`, reached through
+  `convert_input_and_batch_indices_to_array`; no test runs either on a `JLArray`.
+- **Evidence:** `grep -rn 'JLArray\|JLArrays\|GPUArraysCore' test/ Project.toml test/Project.toml`
+  finds no hit, so the test environment carries neither package. The code itself is device-clean.
+  `julia --startup-file=no` on a script that opens a temporary environment — `Pkg.activate(;
+  temp = true)`, `Pkg.develop(Pkg.PackageSpec(path = "."))`, `Pkg.add(["JLArrays",
+  "GPUArraysCore", "KernelAbstractions"])` — then calls
+  `convert_input_and_batch_indices_to_array` under `allowscalar(false)` passes 57 of 57 assertions
+  in `Float32` and 57 of 57 in `Float64` (2026-10-28), on a tensor loader, a `(q, p)` loader and an
+  `autoencoder = true` one: every drawn batch's input and target is a `JLArray{T, 3}` that holds
+  the source tensor's entries, `networkbackend` is a `JLBackend`, and the conversions to `CPU()`
+  and to the other precision return the element type they name. The device tests of
+  GeometricMachineLearning train a network of that package, so no testset of them moves here with
+  the loader.
+- **Kind:** missing test
+- **Found:** 2026-10-28 (critic round 1a)
+
+### K15 · The local inventory of GeometricMachineLearning's manual does not exist
+
+- **Location:** `docs/make.jl`, the third element of the `InterLinks` tuple,
+  `joinpath(@__DIR__, "inventories", "GeometricMachineLearning.toml")`.
+- **Evidence:** `ls docs/inventories` reports no such directory, on `origin/main` (`git cat-file -e
+  064a310:docs/inventories/GeometricMachineLearning.toml` fails) and on this branch, and `makedocs`
+  does not create one. The build of 2026-10-28 renders the 4 distinct GeometricMachineLearning
+  links of its page from the remote `objects.inv` that the tuple's second element names, so the
+  third element is a fallback that no build reads.
+- **Kind:** defect
+- **Found:** 2026-10-28 (critic round 1b)

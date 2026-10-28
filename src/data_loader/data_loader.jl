@@ -29,31 +29,40 @@ dl.input
 
 # output
 
-[ Info: You have provided a matrix as input. The axes will be interpreted as (i) system dimension and (ii) number of parameters.
-2×1×3 Array{Int64, 3}:
+[ Info: You have provided a matrix as input. The axes will be interpreted as (i) system dimension and (ii) number of time steps.
+2×3×1 Array{Int64, 3}:
 [:, :, 1] =
- 1
- 4
-
-[:, :, 2] =
- 2
- 5
-
-[:, :, 3] =
- 3
- 6
+ 1  2  3
+ 4  5  6
 ```
 """
 struct DataLoader{T, AT <: Union{NamedTuple, AbstractArray{T}},
-    OT <: Union{AbstractArray, Nothing}, DataType}
+    OT <: Union{AbstractArray, Nothing}, K, S <: Union{Int, Nothing}}
     input::AT
     output::OT
     input_dim::Int
     input_time_steps::Int
     n_params::Int
-    output_dim::Union{Int, Nothing}
-    output_time_steps::Union{Int, Nothing}
+    output_dim::S
+    output_time_steps::S
 end
+
+# The fifth parameter is the type of the two output fields, which is `Nothing` for a loader without
+# an output and `Int` with one. A caller that names the first four — `DataLoader{T, AT, OT,
+# :TimeSeries}(…)`, which is how `GMLDatasets` builds a loader — gets it filled in from the fields,
+# and the five counts are converted to `Int` whatever integer type the caller passes.
+function DataLoader{T, AT, OT, K}(input::AT, output::OT, input_dim, input_time_steps,
+        n_params, output_dim, output_time_steps) where {T, AT, OT, K}
+    S = output_dim === nothing ? Nothing : Int
+    DataLoader{T, AT, OT, K, S}(input, output, input_dim, input_time_steps, n_params,
+        output_dim, output_time_steps)
+end
+
+# The two decisions `autoencoder` makes at every constructor that takes a data set: the kind it
+# builds, and the two lengths of a matrix or a `(q, p)` pair read as a set of samples, whose second
+# axis is then the parameter index and whose time axis has length one.
+data_set_kind(autoencoder::Bool) = autoencoder ? :RegularData : :TimeSeries
+data_set_shape(autoencoder::Bool, n::Int) = autoencoder ? (1, n) : (n, 1)
 
 """
     DataLoader(data::AbstractArray{<:Number, 3})
@@ -66,7 +75,7 @@ There are two optional keyword arguments:
 - `autoencoder = false` and
 - `suppress_info = false`.
 
-By default the data are stored as `TimeSeries` type. If you want to train an [`GeometricMachineLearning.AutoEncoder`](@extref) with your data call:
+By default the data are stored as `TimeSeries` type. If you want to train an [`AutoEncoder`](@ref) with your data call:
 
 ```julia
     DataLoader(data; autoencoder = true)
@@ -90,7 +99,7 @@ DataLoader(data)
 
 ┌ Info: You have provided a tensor with three axes as input. They will be interpreted as
 └  (i) system dimension, (ii) number of time steps and (iii) number of params.
-DataLoader{Int64, Array{Int64, 3}, Nothing, :TimeSeries}([1 4; 2 5; 3 6;;; 7 10; 8 11; 9 12], nothing, 3, 2, 2, nothing, nothing)
+DataLoader{Int64, Array{Int64, 3}, Nothing, :TimeSeries, Nothing}([1 4; 2 5; 3 6;;; 7 10; 8 11; 9 12], nothing, 3, 2, 2, nothing, nothing)
 ```
 
 But if we write
@@ -107,23 +116,19 @@ DataLoader(data; suppress_info = true)
 
 # output
 
-DataLoader{Int64, Array{Int64, 3}, Nothing, :TimeSeries}([1 4; 2 5; 3 6;;; 7 10; 8 11; 9 12], nothing, 3, 2, 2, nothing, nothing)
+DataLoader{Int64, Array{Int64, 3}, Nothing, :TimeSeries, Nothing}([1 4; 2 5; 3 6;;; 7 10; 8 11; 9 12], nothing, 3, 2, 2, nothing, nothing)
 ```
 the `@info` statement is not printed.
 """
-function DataLoader(data::AbstractArray{T, 3}; autoencoder = false, suppress_info = false) where {T}
+Base.@constprop :aggressive function DataLoader(
+        data::AbstractArray{T, 3}; autoencoder::Bool = false, suppress_info = false) where {T}
     if !suppress_info
         @info "You have provided a tensor with three axes as input. They will be interpreted as \n (i) system dimension, (ii) number of time steps and (iii) number of params."
     end
     input_dim, input_time_steps, n_params = size(data)
 
-    if !autoencoder
-        DataLoader{T, typeof(data), Nothing, :TimeSeries}(
-            data, nothing, input_dim, input_time_steps, n_params, nothing, nothing)
-    elseif autoencoder
-        DataLoader{T, typeof(data), Nothing, :RegularData}(
-            data, nothing, input_dim, input_time_steps, n_params, nothing, nothing)
-    end
+    DataLoader{T, typeof(data), Nothing, data_set_kind(autoencoder)}(
+        data, nothing, input_dim, input_time_steps, n_params, nothing, nothing)
 end
 
 """
@@ -137,24 +142,20 @@ See [`DataLoader(::AbstractArray{<:Number, 3})`](@ref) for details.
 
 # Implementation
 
-Internally the data are reshaped to a tensor of shape `(size(data)..., 1)` to make for a consistent representation.
+The second axis of the matrix is the number of time steps, and internally the data are reshaped to
+a tensor of shape `(size(data)..., 1)`: one trajectory of one parameter. With `autoencoder = true`
+the matrix is a set of samples instead, so that axis is the parameter index and the time axis has
+length one.
 """
-function DataLoader(data::AbstractMatrix{T}; autoencoder = true, suppress_info = false) where {T}
+Base.@constprop :aggressive function DataLoader(
+        data::AbstractMatrix{T}; autoencoder::Bool = false, suppress_info = false) where {T}
     if !suppress_info
-        @info "You have provided a matrix as input. The axes will be interpreted as (i) system dimension and (ii) number of parameters."
+        @info "You have provided a matrix as input. The axes will be interpreted as (i) system dimension and (ii) $(autoencoder ? "number of parameters" : "number of time steps")."
     end
-
-    if !autoencoder
-        input_dim, time_steps = size(data)
-        reshaped_data = reshape(data, input_dim, time_steps, 1)
-        return DataLoader{T, typeof(reshaped_data), Nothing, :TimeSeries}(
-            reshaped_data, nothing, input_dim, time_steps, 1, nothing, nothing)
-    elseif autoencoder
-        input_dim, n_params = size(data)
-        reshaped_data = reshape(data, input_dim, 1, n_params)
-        return DataLoader{T, typeof(reshaped_data), Nothing, :RegularData}(
-            reshaped_data, nothing, input_dim, 1, n_params, nothing, nothing)
-    end
+    input_dim, second_dim = size(data)
+    time_steps, n_params = data_set_shape(autoencoder, second_dim)
+    DataLoader(reshape(data, input_dim, time_steps, n_params);
+        autoencoder = autoencoder, suppress_info = true)
 end
 
 """
@@ -167,69 +168,45 @@ Make an instance of `DataLoader` based on a vector.
 If the input to `DataLoader` is a vector, it is assumed that this vector represents one-dimensional time-series data and is therefore processed as:
 
 ```julia
-    DataLoader(data::AbstractVector; autoencoder=true) = DataLoader(reshape(data, 1, length(data)); autoencoder = autoencoder)
+    DataLoader(data::AbstractVector; autoencoder=false) = DataLoader(reshape(data, 1, length(data)); autoencoder = autoencoder)
 ```
 """
-function DataLoader(data::AbstractVector; autoencoder = true, suppress_info = false)
+function DataLoader(data::AbstractVector; autoencoder::Bool = false, suppress_info = false)
     DataLoader(reshape(data, 1, length(data)); autoencoder = autoencoder, suppress_info = suppress_info)
 end
 
-function DataLoader(input::AbstractArray{T, 3}, output::AbstractArray{T, 3}; suppress_info = false) where {T}
-    @assert size(input, 3) == size(output, 3)
+# A loader that holds an output is a set of samples whatever its kind: its target is the output
+# itself and never the input shifted by the sequence length. The output's element type is the
+# input's or an integer, so a real input can carry an integer one-hot target — a classifier's data,
+# and `accuracy`'s argument — and any other pair of element types is a `MethodError`.
+function DataLoader(input::AbstractArray{T, 3}, output::AbstractArray{T1, 3};
+        suppress_info = false) where {T, T1 <: Union{T, Integer}}
+    size(input, 3) == size(output, 3) || throw(ArgumentError(
+        "the input holds $(size(input, 3)) samples and the output holds $(size(output, 3)); " *
+        "a `DataLoader` takes one output for each input."))
     if !suppress_info
         @info "You have provided an input and an output."
     end
 
-    DataLoader{T, typeof(input), typeof(output), :TimeSeries}(
+    DataLoader{T, typeof(input), typeof(output), :RegularData}(
         input, output, size(input, 1), size(input, 2),
         size(input, 3), size(output, 1), size(output, 2))
 end
 
-function DataLoader(input::AbstractMatrix{T}, output::AbstractMatrix{T}; suppress_info = false) where {T}
+function DataLoader(input::AbstractMatrix{T}, output::AbstractMatrix{T1};
+        suppress_info = false) where {T, T1 <: Union{T, Integer}}
     DataLoader(reshape(input, size(input)..., 1),
         reshape(output, size(output)..., 1); suppress_info = suppress_info)
 end
 
-function DataLoader(input::AbstractVector{T}, output::AbstractVector{T}; suppress_info = false) where {T}
+function DataLoader(input::AbstractVector{T}, output::AbstractVector{T1};
+        suppress_info = false) where {T, T1 <: Union{T, Integer}}
     DataLoader(reshape(input, 1, length(input)),
         reshape(output, 1, length(output)); suppress_info = suppress_info)
 end
 
 @doc raw"""
-    DataLoader(data::AbstractArray{T, 3}, target::AbstractVector)
-
-Make an instance of DataLoader for a classification problem.
-
-Target here is a vector of labels. This is tailored towards being used with the package [`MLDatasets.jl`](https://github.com/JuliaML/MLDatasets.jl).
-
-# Arguments
-
-There are two keyword arguments:
-- `patch_length = 7`. This is the length of the patch in the ``x`` and the ``y`` direction;
-- `suppress_info = false`.
-
-For the example of the MNIST data set all images are of size ``49\times49``.
-For `patch_length = 7` the image is therefore split into 16 ``7\times7`` patches [Brantner:2023](@cite).
-"""
-function DataLoader(data::AbstractArray{T, 3}, target::AbstractVector{T1};
-        patch_length = 7,
-        suppress_info = false) where {T, T1}
-    if !suppress_info
-        @info "You provided a tensor and a vector as input. This will be treated as a classification problem (MNIST). Tensor axes: (i) & (ii) image axes and (iii) parameter dimension."
-    end
-    im_dim₁, im_dim₂, n_params = size(data)
-    @assert length(target) == n_params
-    number_of_patches = (im_dim₁ ÷ patch_length) * (im_dim₂ ÷ patch_length)
-    target = onehotbatch(target)
-    data_preprocessed = split_and_flatten(
-        data, patch_length = patch_length, number_of_patches = number_of_patches)
-    DataLoader{T, typeof(data_preprocessed), typeof(target), :TimeSeries}(
-        data_preprocessed, target, patch_length^2, number_of_patches, n_params, 10, 1
-    )
-end
-
-@doc raw"""
-    DataLoader(data::QPT)
+    DataLoader(data::NamedTuple{(:q, :p), Tuple{AT, AT}})
 
 Make an instance of `DataLoader` based on ``(q, p)`` data.
 
@@ -240,83 +217,62 @@ In this case the field `input_dim` of `DataLoader` is interpreted as the sum of 
 Apart from this the input is treated similarly as if it were an `Array`, i.e. everything is converted to tensors internally.
 See e.g. [`DataLoader{::AbstractArray{<:Number, 3}}`](@ref).
 """
-function DataLoader(data::NamedTuple{(:q, :p), Tuple{AT, AT}};
-        autoencoder = false,
+Base.@constprop :aggressive function DataLoader(data::NamedTuple{(:q, :p), Tuple{AT, AT}};
+        autoencoder::Bool = false,
         suppress_info = false) where {T, AT <: AbstractMatrix{T}}
     if !suppress_info
         @info "You have provided a NamedTuple with keys q and p; the data are matrices. This is interpreted as *symplectic data*."
     end
-
-    if !autoencoder
-        dim2, time_steps = size(data.q)
-        reshaped_data = (q = reshape(data.q, dim2, time_steps, 1),
-            p = reshape(data.p, dim2, time_steps, 1))
-        return DataLoader{T, typeof(reshaped_data), Nothing, :TimeSeries}(
-            reshaped_data, nothing, dim2 * 2, time_steps, 1, nothing, nothing)
-    elseif autoencoder
-        dim2, n_params = size(data.q)
-        reshaped_data = (
-            q = reshape(data.q, dim2, 1, n_params), p = reshape(data.p, dim2, 1, n_params))
-        return DataLoader{T, typeof(reshaped_data), Nothing, :RegularData}(
-            reshaped_data, nothing, dim2 * 2, 1, n_params, nothing, nothing)
-    end
+    dim2, second_dim = size(data.q)
+    time_steps, n_params = data_set_shape(autoencoder, second_dim)
+    DataLoader(map(tensor -> reshape(tensor, dim2, time_steps, n_params), data);
+        autoencoder = autoencoder, suppress_info = true)
 end
 
-function DataLoader(data::NamedTuple{(:q, :p), Tuple{AT, AT}};
-        autoencoder = false,
+Base.@constprop :aggressive function DataLoader(data::NamedTuple{(:q, :p), Tuple{AT, AT}};
+        autoencoder::Bool = false,
         suppress_info = false) where {T, AT <: AbstractArray{T, 3}}
     if !suppress_info
         @info "You have provided a NamedTuple with keys q and p; the data are tensors. This is interpreted as *symplectic data*."
     end
-
     dim2, time_steps, n_params = size(data.q)
 
-    if !autoencoder
-        DataLoader{T, typeof(data), Nothing, :TimeSeries}(
-            data, nothing, dim2 * 2, time_steps, n_params, nothing, nothing)
-    elseif autoencoder
-        DataLoader{T, typeof(data), Nothing, :RegularData}(
-            data, nothing, dim2 * 2, time_steps, n_params, nothing, nothing)
-    end
+    DataLoader{T, typeof(data), Nothing, data_set_kind(autoencoder)}(
+        data, nothing, dim2 * 2, time_steps, n_params, nothing, nothing)
 end
 
 function DataLoader(data::NamedTuple{(:q, :p), Tuple{VT, VT}};
-        suppress_info = false) where {VT <: AbstractVector}
+        autoencoder::Bool = false, suppress_info = false) where {VT <: AbstractVector}
     DataLoader(
         (q = reshape(data.q, 1, length(data.q)), p = reshape(data.p, 1, length(data.p)));
-        suppress_info = suppress_info)
+        autoencoder = autoencoder, suppress_info = suppress_info)
 end
 
-function data_tensors_from_geometric_solution(solution::GeometricSolution{T,
-        T2,
-        TT,
-        NT}) where {T <: Number, T2 <: Number, TT <: TimeSeries{T2},
-        TuT, NT <: NamedTuple{(:t, :q, :p, :q̇, :ṗ), TuT}}
-    sys_dim, input_time_steps = length(solution.dataser.q[0]), length(solution.t)
-    data = (q = zeros(T, sys_dim, input_time_steps, 1),
-        p = zeros(T, sys_dim, input_time_steps, 1))
-
-    for dim in 1:sys_dim
-        data.q[dim, :, 1] = solution.q[:, dim]
-        data.p[dim, :, 1] = solution.p[:, dim]
+# The 1-based tensor of one coordinate over a vector of trajectories — one solution, or the members
+# of an ensemble — with the axes `(system dimension, time steps, trajectories)`. The `q` of a
+# solution carries the `DataSeries` time axis `0:n`, so the states are copied in one at a time.
+function data_tensor(trajectories::AbstractVector)
+    states = first(trajectories)
+    data = Array{eltype(first(states))}(
+        undef, length(first(states)), length(states), length(trajectories))
+    for (k, trajectory) in enumerate(trajectories)
+        for (t, state) in enumerate(trajectory)
+            data[:, t, k] = state
+        end
     end
-
     data
 end
 
-function data_tensors_from_geometric_solution(solution::GeometricSolution{T,
-        T2,
-        TT,
-        NT}) where {T <: Number, T2 <: Number, TT <: TimeSeries{T2}, TuT,
-        NT <: Union{NamedTuple{(:t, :q, :v), TuT}, NamedTuple{(:t, :q, :q̇), TuT}}}
-    sys_dim, input_time_steps = length(solution.dataser.q[0]), length(solution.t)
-    data = zeros(T, sys_dim, input_time_steps, 1)
+function data_tensors_from_geometric_solution(
+        solution::GeometricSolution{
+        <:Number, <:Number, <:Any, <:NamedTuple{(:t, :q, :p, :q̇, :ṗ)}})
+    (q = data_tensor([solution.q]), p = data_tensor([solution.p]))
+end
 
-    for dim in 1:sys_dim
-        data[dim, :, 1] = solution.q[:, dim]
-    end
-
-    data
+function data_tensors_from_geometric_solution(solution::GeometricSolution{
+        <:Number, <:Number,
+        <:Any, <:Union{NamedTuple{(:t, :q, :v)}, NamedTuple{(:t, :q, :q̇)}}})
+    data_tensor([solution.q])
 end
 
 """
@@ -324,7 +280,7 @@ end
 
 Make an instance of `DataLoader` for a `GeometricSolution`.
 
-`GeometricSolution`s are imported from the the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
+`GeometricSolution`s are imported from the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
 
 # Arguments
 
@@ -337,53 +293,30 @@ See the docstring for [`DataLoader(::AbstractArray{<:Number, 3})`](@ref).
 
 Internally this stores the data as a tensor where the third axis has length 1.
 """
-function DataLoader(solution::GeometricSolution{T, T2, TT, NT},
-        suppress_info = false;
-        kwargs...) where
-        {T <: Number,
-        T2 <: Number,
-        TT <: TimeSeries{T2},
-        TuT,
-        NT <: Union{
-            NamedTuple{(:t, :q, :p, :q̇, :ṗ), TuT},
-            NamedTuple{(:t, :q, :v), TuT},
-            NamedTuple{(:t, :q, :q̇), TuT}}}
-    data = data_tensors_from_geometric_solution(solution)
-
-    DataLoader(data; suppress_info = suppress_info, kwargs...)
+function DataLoader(solution::GeometricSolution{T, T2, TT, NT};
+        autoencoder::Bool = false, suppress_info = false) where {T <: Number, T2 <: Number,
+        TT <: TimeSeries{T2}, TuT,
+        NT <: Union{NamedTuple{(:t, :q, :p, :q̇, :ṗ), TuT},
+            NamedTuple{(:t, :q, :v), TuT}, NamedTuple{(:t, :q, :q̇), TuT}}}
+    DataLoader(data_tensors_from_geometric_solution(solution);
+        autoencoder = autoencoder, suppress_info = suppress_info)
 end
 
 function DataLoader(ensemble_solution::EnsembleSolution{T, T1, Vector{ST}};
-        suppress_info = false) where {T,
-        T1,
-        TuT,
-        TT <: TimeSeries{T1},
-        ST <: Union{
+        autoencoder::Bool = false, suppress_info = false) where {T, T1, TuT,
+        TT <: TimeSeries{T1}, ST <: Union{
             GeometricSolution{T, T1, TT, NamedTuple{(:t, :q, :v), TuT}},
-            GeometricSolution{T, T1, TT, NamedTuple{(:t, :q, :q̇), TuT}}
-        }
-}
-    sys_dim = length(ensemble_solution.s[1].q[0])
-    input_time_steps = length(ensemble_solution.t)
-    n_params = length(ensemble_solution.s)
-
-    data = zeros(sys_dim, input_time_steps, n_params)
-
-    for (solution, i) in zip(ensemble_solution.s, axes(ensemble_solution.s, 1))
-        for dim in 1:sys_dim
-            data[dim, :, i] = solution.q[:, dim]
-        end
-    end
-
-    DataLoader(data; suppress_info = suppress_info)
+            GeometricSolution{T, T1, TT, NamedTuple{(:t, :q, :q̇), TuT}}}}
+    DataLoader(data_tensor([s.q for s in ensemble_solution.s]);
+        autoencoder = autoencoder, suppress_info = suppress_info)
 end
 
 """
     DataLoader(ensemble_solution)
 
-Make an instance of `DataLoader` for a `EnsembleSolution`.
+Make an instance of `DataLoader` for an `EnsembleSolution`.
 
-`EnsembleSolution`s are imported from the the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
+`EnsembleSolution`s are imported from the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
 
 # Arguments
 
@@ -398,51 +331,35 @@ See the docstring for [`DataLoader(::AbstractArray{<:Number, 3})`](@ref).
 Internally this stores the data as a tensor where the third axis has length equal to the number of solutions in the ensemble.
 """
 function DataLoader(ensemble_solution::EnsembleSolution{T, T1, Vector{ST}};
-        autoencoder = false,
-        suppress_info = false
-) where {T,
-        T1,
-        TuT,
-        TT <: TimeSeries{T1},
-        ST <: GeometricSolution{T, T1, TT, NamedTuple{(:t, :q, :p, :q̇, :ṗ), TuT}}
-}
-    sys_dim = length(ensemble_solution.s[1].q[0])
-    input_time_steps = length(ensemble_solution.t)
-    n_params = length(ensemble_solution.s)
-
-    data = (q = zeros(T, sys_dim, input_time_steps, n_params),
-        p = zeros(T, sys_dim, input_time_steps, n_params))
-
-    for (solution, i) in zip(ensemble_solution.s, axes(ensemble_solution.s, 1))
-        for dim in 1:sys_dim
-            data.q[dim, :, i] = solution.q[:, dim]
-            data.p[dim, :, i] = solution.p[:, dim]
-        end
-    end
-
-    DataLoader(data; autoencoder = autoencoder, suppress_info = suppress_info)
+        autoencoder::Bool = false, suppress_info = false) where {T, T1, TuT,
+        TT <: TimeSeries{T1}, ST <: GeometricSolution{T, T1, TT,
+            NamedTuple{(:t, :q, :p, :q̇, :ṗ), TuT}}}
+    DataLoader(
+        (q = data_tensor([s.q for s in ensemble_solution.s]),
+            p = data_tensor([s.p for s in ensemble_solution.s]));
+        autoencoder = autoencoder, suppress_info = suppress_info)
 end
 
-function map_to_new_backend(input::AbstractArray{T}, backend::KernelAbstractions.Backend) where {T}
-    input₂ = KernelAbstractions.allocate(backend, T, size(input)...)
-    KernelAbstractions.copyto!(backend, input₂, input)
-    input₂
+# An array already on the backend is returned as it is. `Base.copyto!` carries a host array to any
+# backend; `KernelAbstractions.copyto!` has a method for the CPU alone, and a device backend such as
+# `JLArray`'s has none.
+function map_to_new_backend(input::AbstractArray{T},
+        backend::KernelAbstractions.Backend) where {T}
+    networkbackend(input) == backend && return input
+    Base.copyto!(KernelAbstractions.allocate(backend, T, size(input)...), input)
 end
 
-function map_to_new_backend(input::QPT{T}, backend::KernelAbstractions.Backend) where {T}
-    input₂ = (q = KernelAbstractions.allocate(backend, T, size(input.q)...),
-        p = KernelAbstractions.allocate(backend, T, size(input.p)...))
-    KernelAbstractions.copyto!(backend, input₂.q, input.q)
-    KernelAbstractions.copyto!(backend, input₂.p, input.p)
-    input₂
+# `map` over a named tuple of arrays, such as `(q, p)` data, reaches each of its tensors; over a
+# plain array it would map the array's elements instead, which is why an array has a method of its
+# own.
+function map_to_new_backend(input::NamedTupleOfArrays, backend::KernelAbstractions.Backend)
+    map(tensor -> map_to_new_backend(tensor, backend), input)
 end
 
-function map_to_type(input::QPT, T::DataType)
-    (q = T.(input.q), p = T.(input.p))
-end
+map_to_type(input::AbstractArray, ::Type{T}) where {T} = T.(input)
 
-function map_to_type(input::AbstractArray, T::DataType)
-    T.(input)
+function map_to_type(input::NamedTupleOfArrays, ::Type{T}) where {T}
+    map(tensor -> map_to_type(tensor, T), input)
 end
 
 @doc raw"""
@@ -465,47 +382,25 @@ If you want to change the data type write e.g.
 There is an optional keyword argument
 - `autoencoder = nothing`.
 
-By default this inherits the autoencoder property form `dl`.
+By default this inherits the autoencoder property from `dl`.
 
 See the docstring for [`DataLoader(data::AbstractArray{<:Number, 3})`](@ref).
 """
-function DataLoader(dl::DataLoader{T1, <:QPTOAT, Nothing, Type},
-        backend::KernelAbstractions.Backend = KernelAbstractions.get_backend(dl),
-        T::DataType = T1;
-        autoencoder = nothing
-) where {T1, Type}
-    DT = if isnothing(autoencoder)
-        Type
-    elseif autoencoder
-        :RegularData
-    elseif !autoencoder
-        :TimeSeries
-    end
+function DataLoader(dl::DataLoader{T1, <:ArrayOrNamedTuple, Nothing, K},
+        backend::KernelAbstractions.Backend = networkbackend(dl),
+        ::Type{T} = T1;
+        autoencoder::Union{Nothing, Bool} = nothing
+) where {T1, K, T}
+    kind = isnothing(autoencoder) ? K : data_set_kind(autoencoder)
+    input = T == T1 ? dl.input : map_to_type(dl.input, T)
+    input = map_to_new_backend(input, backend)
 
-    input = if T == T1
-        dl.input
-    else
-        map_to_type(dl.input, T)
-    end
-
-    new_input = if backend == KernelAbstractions.get_backend(dl)
-        input
-    else
-        map_to_new_backend(input, backend)
-    end
-
-    DataLoader{T, typeof(new_input), Nothing, DT}(
-        new_input,
-        nothing,
-        dl.input_dim,
-        dl.input_time_steps,
-        dl.n_params,
-        nothing,
-        nothing)
+    DataLoader{T, typeof(input), Nothing, kind}(
+        input, nothing, dl.input_dim, dl.input_time_steps, dl.n_params, nothing, nothing)
 end
 
-function DataLoader(dl::DataLoader, T::DataType; kwargs...)
-    DataLoader(dl, KernelAbstractions.get_backend(dl), T; kwargs...)
+function DataLoader(dl::DataLoader, ::Type{T}; kwargs...) where {T}
+    DataLoader(dl, networkbackend(dl), T; kwargs...)
 end
 
 @doc raw"""
@@ -513,7 +408,9 @@ end
 
 Compute the accuracy of a neural network classifier.
 
-This needs an instance of [`DataLoader`](@ref) that stores the *test data*.
+This needs an instance of [`DataLoader`](@ref) that stores the *test data*. The result is one minus
+the fraction of errors, where a wrongly labelled sample is one error and a sample that carries no
+label is half an error. Its type is `float(T)`, for `T` the element type of the loader's input.
 """
 function accuracy(model::Chain,
         ps::NetworkParameters,
@@ -521,13 +418,23 @@ function accuracy(model::Chain,
         T, T1 <: Integer, AT <: AbstractArray{T}, BT <: AbstractArray{T1}}
     output_tensor = model(dl.input, ps)
     output_estimate = assign_output_estimate(output_tensor, dl.output_time_steps)
-    backend = KernelAbstractions.get_backend(output_estimate)
+    backend = networkbackend(output_estimate)
     tensor_of_maximum_elements = KernelAbstractions.zeros(backend, T1, size(output_estimate)...)
     ind = argmax(output_estimate, dims = 1)
     # get tensor of maximum elements
     tensor_of_maximum_elements[ind] .= T1(1)
-    (size(dl.output, 3) - sum(abs.(dl.output - tensor_of_maximum_elements)) / T1(2)) /
-    size(dl.output, 3)
+    # The count is halved, not floored: a wrongly labelled sample differs from the target in two
+    # entries of its one-hot column and a sample that carries no label differs in one, so half the
+    # difference is the number of errors. The fraction is then read in `float(T)`, for `T` the
+    # element type of the loader's input; reading it in the output's would widen a `Float32`
+    # loader's result, and reading it in an integer `T` fails on a half error. The difference is
+    # `max - min`, which does not wrap for an unsigned `T1`, and the count spans every labelled
+    # column: the time steps of the output times its parameter axis.
+    n = dl.output_time_steps * size(dl.output, 3)
+    errors = sum(max.(dl.output, tensor_of_maximum_elements) .-
+                 min.(dl.output, tensor_of_maximum_elements)) / 2
+    F = float(T)
+    F(n - errors) / F(n)
 end
 
 @doc raw"""
@@ -541,7 +448,7 @@ accuracy(nn::NeuralNetwork, dl::DataLoader) = accuracy(nn.model, params(nn), dl)
 
 Base.eltype(::DataLoader{T}) where {T} = T
 
-KernelAbstractions.get_backend(dl::DataLoader) = KernelAbstractions.get_backend(dl.input)
-function KernelAbstractions.get_backend(dl::DataLoader{T, <:QPT{T}}) where {T}
-    KernelAbstractions.get_backend(dl.input.q)
+networkbackend(dl::DataLoader) = networkbackend(dl.input)
+function networkbackend(dl::DataLoader{T, <:NamedTupleOfArrays{T}}) where {T}
+    networkbackend(first(dl.input))
 end

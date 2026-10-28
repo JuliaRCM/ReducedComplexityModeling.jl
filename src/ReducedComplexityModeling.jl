@@ -3,7 +3,10 @@ module ReducedComplexityModeling
 using ForwardDiff
 using GeometricBase: AbstractDataType, AbstractSystem
 using GeometricEquations
-using GeometricSolutions
+# The solution types this package dispatches on: an ensemble of solutions, one solution, and the
+# data series a snapshot matrix is built from. The loader also dispatches on `TimeSeries`, the time
+# axis a solution of an `EnsembleSolution` carries.
+using GeometricSolutions: DataSeries, EnsembleSolution, GeometricSolution, TimeSeries
 using HDF5
 using HDF5: H5DataStore
 using LazyArrays
@@ -12,26 +15,37 @@ using Optim
 using TypedTables
 using KernelAbstractions
 using AbstractNeuralNetworks: Chain, NeuralNetwork
-using NeuralNetworkParameters: NetworkParameters
+# `NetworkParameters` is a network's parameter container. `parameter_eltype` and `parameterlayout`
+# are what the parametric loader compares one system parameter against another with: an element
+# type, and the keys and leaf sizes at every level.
+using NeuralNetworkParameters: NetworkParameters, parameter_eltype, parameterlayout
 
-# DataLoader dispatches on (q, p) pairs of arrays with matching types, or on a single array.
-const QPT{T} = NamedTuple{(:q, :p), Tuple{AT, AT}} where {T, AT <: AbstractArray{T}}
-const QPTOAT{T} = Union{QPT{T}, AbstractArray{T}} where {T}
+# The input and output types of a network: `NamedTupleOfArrays{T, (:q, :p)}` is data in `(q, p)`
+# form and `ArrayOrNamedTuple{T}` is an array or a named tuple of arrays. The data loader dispatches
+# on them, and the package that owns them does not export either.
+using AbstractNeuralNetworks: NamedTupleOfArrays, ArrayOrNamedTuple
+# `networkbackend` is a loader's backend and `params` a network's parameters: both are generics of a
+# dependency rather than functions of this package. `params` is NeuralNetworkParameters', which
+# AbstractNeuralNetworks re-exports.
+import AbstractNeuralNetworks: networkbackend, params
 
 import GeometricBase: state_symbols
-import ChainRulesCore
-using ChainRulesCore: @thunk, Thunk
 
-export DataLoader
+export DataLoader, Batch
+
+# `ParametricDataLoader` is public and not exported: a caller reaches it as
+# `ReducedComplexityModeling.ParametricDataLoader`, so the loader of trajectories and their system
+# parameters is available without growing the export list.
+public ParametricDataLoader
 
 # needed for shuffle function
 import Random
+import Random: shuffle
 
 include("data_loader/data_loader.jl")
 include("data_loader/tensor_assign.jl")
-include("data_loader/matrix_assign.jl")
-include("data_loader/mnist_utils.jl")
 include("data_loader/batch.jl")
+include("data_loader/parametric_data_loader.jl")
 
 include("TrainingData/TrainingData.jl")
 

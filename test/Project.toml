@@ -4,6 +4,7 @@ Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GeometricBase = "9a0b12b7-583b-4f04-aa1f-d8551b6addc9"
 GeometricIntegrators = "dcce2d33-59f6-5b8d-9047-0defad88ae06"
+GeometricProblems = "18cb22b4-ad41-5c80-9c5f-710df63fbdc9"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
@@ -12,9 +13,11 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 ReducedComplexityModeling = "abb4722c-1d8e-48eb-a3bd-45b3116bfaba"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 Documenter = "1.19.0"
+GeometricProblems = "0.8, 0.9"
 
 [sources]
 ReducedComplexityModeling = {path = ".."}
