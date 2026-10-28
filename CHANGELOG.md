@@ -34,9 +34,8 @@ holds the changes since the last release until that release is cut.
 - **A matrix or a vector is a time series by default.** `DataLoader(::AbstractMatrix)` and
   `DataLoader(::AbstractVector)` default `autoencoder = false`, where the fork defaulted it to
   `true`: `DataLoader(data)` reads the second axis as the number of time steps, and a set of
-  samples is `DataLoader(data; autoencoder = true)`. `DataLoader(solution)` and
-  `DataLoader(ensemble_solution)` take `suppress_info` as a keyword, so `DataLoader(solution, true)`
-  raises a `MethodError`.
+  samples is `DataLoader(data; autoencoder = true)`. `DataLoader(solution)` takes `suppress_info`
+  as a keyword, so `DataLoader(solution, true)` raises a `MethodError`.
 - **`DataLoader(tensor, labels::AbstractVector)` is gone.** That method preprocessed images for
   MNIST, with `patch_length = 7`; patch the images and build the one-hot target with `GMLDatasets`
   first, then call `DataLoader(input, output)`, whose output may be an integer array.

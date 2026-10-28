@@ -1,6 +1,7 @@
-# `ParametricLoss` and `apply_parametric` are GeometricMachineLearning's names, and the inventory
-# of that manual which this manual reads defines neither, so the docstring below writes them as
-# code spans.
+# `ParametricLoss`, `apply_parametric` and `train!` are GeometricMachineLearning's names, and the
+# inventory of that manual which this manual reads defines none of them, so the docstring below
+# writes them as code spans. `train!` would otherwise resolve to this package's own `train!`, to
+# which the loader's method does not belong.
 @doc raw"""
     ParametricDataLoader(data, parameters)
     ParametricDataLoader(ensemble_solution)
@@ -20,7 +21,7 @@ gives its `q` and `p` and the parameters of its problem.
 A `Batch(batch_size)` draws, in one epoch, each pair of a start position and a trajectory once, in
 minibatches of `batch_size`; the last minibatch is shorter. A drawn minibatch is the triple
 `(input, output, μs)`: the state at the start position, the state one time step later, and the
-``\mu`` of each sample. GeometricMachineLearning's [`train!`](@ref) method for a
+``\mu`` of each sample. GeometricMachineLearning's `train!` method for a
 `ParametricDataLoader` trains on `ParametricLoss()` when no `loss` is given, so the network is
 applied with `apply_parametric`, one time step per sample. A `Batch` with a sequence length or a
 prediction window other than one is an `ArgumentError`.
