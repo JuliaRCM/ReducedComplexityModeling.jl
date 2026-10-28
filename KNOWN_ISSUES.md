@@ -78,3 +78,28 @@
   the `Chain` and `NeuralNetwork` imports have no diagnostic.
 - **Kind:** defect
 - **Found:** 2026-10-11 (pre-PR verification of `compat/ann-0.8`)
+
+### K14 · The loader's gather kernel has no device test
+
+- **Location:** `src/data_loader/batch.jl`, `gather` and `gather_kernel!`, reached through
+  `convert_input_and_batch_indices_to_array`; no test runs either on a `JLArray`.
+- **Evidence:** `grep -rn 'JLArray\|JLArrays\|GPUArraysCore' test/ Project.toml test/Project.toml`
+  finds no hit, so the test environment carries neither package. The code itself is device-clean
+  when probed: critic round 1a's `probe_names_device.jl` passes 57 of 57 assertions in each
+  precision under `allowscalar(false)`, on a tensor loader, a `(q, p)` loader and an
+  `autoencoder = true` one. The device tests of GeometricMachineLearning train a network of that
+  package, so no testset of them moves here with the loader.
+- **Kind:** missing test
+- **Found:** 2026-10-28 (critic round 1a)
+
+### K15 · The local inventory of GeometricMachineLearning's manual does not exist
+
+- **Location:** `docs/make.jl`, the third element of the `InterLinks` tuple,
+  `joinpath(@__DIR__, "inventories", "GeometricMachineLearning.toml")`.
+- **Evidence:** `ls docs/inventories` reports no such directory, on `origin/main` (`git cat-file -e
+  064a310:docs/inventories/GeometricMachineLearning.toml` fails) and on this branch, and `makedocs`
+  does not create one. The build of 2026-10-28 renders the 4 distinct GeometricMachineLearning
+  links of its page from the remote `objects.inv` that the tuple's second element names, so the
+  third element is a fallback that no build reads.
+- **Kind:** defect
+- **Found:** 2026-10-28 (critic round 1b)

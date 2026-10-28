@@ -45,29 +45,36 @@ end
         # the one gather kernel of a `(q, p)` input: `gather` launches it once per tensor
         @test isempty(kernel_body_reports(gather_kernel!,
             (2, 3, 4), zeros(2, 3, 4), zeros(2, 8, 4), indices, 3))
-        # test/data_loader/draw_batch_for_tensor_test.jl: the tensor loader of both precisions
-        for T in REAL_ELTYPES
-            @test isempty(JET.get_reports(JET.report_opt(
-                convert_input_and_batch_indices_to_array,
-                (DataLoader{T, A3{T}, Nothing, :TimeSeries, Nothing},
-                    Batch{:Transformer}, Indices); target_modules = RCM)))
-            # the gather kernel, once per element type
-            @test isempty(kernel_body_reports(gather_kernel!,
-                (2, 3, 4), zeros(T, 2, 3, 4), zeros(T, 2, 8, 4), indices, 3))
-        end
         # the doctest of `convert_input_and_batch_indices_to_array`, a `:RegularData` loader without
         # an output
         @test isempty(JET.get_reports(JET.report_opt(
             convert_input_and_batch_indices_to_array,
             (RegularArray, Batch{:FeedForward}, Indices); target_modules = RCM)))
-        # a loader with an output, of kind `:TimeSeries`: no loader of the suite has this type.
+        # test/data_loader/draw_batch_for_tensor_test.jl: a `:TimeSeries` loader without an output,
+        # in both precisions and at each of the two `Batch` kinds a caller builds without naming
+        # one, `Batch(batch_size)` and `Batch(batch_size, seq_length)`
+        for T in REAL_ELTYPES, BatchType in (Batch{:FeedForward}, Batch{:Transformer})
+
+            @test isempty(JET.get_reports(JET.report_opt(
+                convert_input_and_batch_indices_to_array,
+                (DataLoader{T, A3{T}, Nothing, :TimeSeries, Nothing}, BatchType, Indices);
+                target_modules = RCM)))
+        end
+        # the gather kernel, once per element type
+        for T in REAL_ELTYPES
+            @test isempty(kernel_body_reports(gather_kernel!,
+                (2, 3, 4), zeros(T, 2, 3, 4), zeros(T, 2, 8, 4), indices, 3))
+        end
+        # input and output of kind `:TimeSeries`: no loader of the suite has this type.
         # `DataLoader(input, output)` builds `:RegularData`, and each `:TimeSeries` loader with an
         # output that a test builds by naming the type has an `Array{Int, 3}` output
-        @test isempty(JET.get_reports(JET.report_opt(
-            convert_input_and_batch_indices_to_array,
-            (DataLoader{Float32, A3{Float32}, A3{Float32}, :TimeSeries, Int},
-                Batch{:FeedForward}, Indices);
-            target_modules = RCM)))
+        for (T, BatchType) in ((Float32, Batch{:Transformer}), (
+            Float64, Batch{:FeedForward}))
+            @test isempty(JET.get_reports(JET.report_opt(
+                convert_input_and_batch_indices_to_array,
+                (DataLoader{T, A3{T}, A3{T}, :TimeSeries, Int}, BatchType, Indices);
+                target_modules = RCM)))
+        end
         # the `Batch` functor under `@allocated` in test/data_loader/batch_index_set.jl, and at the
         # element types its other direct calls make: `Int` in test/data_loader/batch_functor.jl and
         # in the doctest of the launcher above
@@ -83,6 +90,11 @@ end
         # test/data_loader/draw_batch_for_tensor_test.jl calls it on a classifier's loader
         @test isempty(JET.get_reports(JET.report_opt(Batch(2),
             (DataLoader{Float32, A3{Float32}, A3{Int}, :RegularData, Int},);
+            target_modules = RCM)))
+        # ... and on a `:TimeSeries` loader whose output is as wide as its input, the other kind
+        # that carries an output
+        @test isempty(JET.get_reports(JET.report_opt(Batch(2),
+            (DataLoader{Float32, A3{Float32}, A3{Float32}, :TimeSeries, Int},);
             target_modules = RCM)))
 
         # src/data_loader/tensor_assign.jl: `assign_output_estimate` in

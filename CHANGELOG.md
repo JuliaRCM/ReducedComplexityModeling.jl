@@ -6,27 +6,31 @@ This package is pre-1.0, so *every* minor release is potentially breaking in the
 [SemVer](https://semver.org) for `0.x` versions. The sections below name what actually
 changed, so that a compat-only bump can be told apart from a rename or a change in results.
 
-This file was started on 2026-08-31 and deliberately holds no entries. 2 versions were
-released before it, the most recent `v0.1.1`, and neither is written up here: the record of
-that history is `git log` and the tags. It is named as a gap rather than reconstructed,
-because a changelog assembled after the fact loses exactly the reasoning that makes it worth
-keeping. The `[Unreleased]` section below holds the changes since the last release until that
-release is cut.
+This file was started on 2026-08-31. 2 versions were released before it, the most recent
+`v0.1.1`, and neither is written up here: the record of that history is `git log` and the
+tags. It is named as a gap rather than reconstructed, because a changelog assembled after the
+fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
+holds the changes since the last release until that release is cut.
 
 ## [Unreleased]
 
 ### Breaking Changes
 
-- **The data loader is GeometricMachineLearning's, and this package's fork is gone.**
-  `src/data_loader/data_loader.jl`, `src/data_loader/batch.jl`, `src/data_loader/tensor_assign.jl`
-  and `test/data_loader/draw_batch_for_tensor_test.jl` — this package's own files — give way to
-  GeometricMachineLearning's files of the same names, which it no longer carries.
-  `src/data_loader/matrix_assign.jl` and `src/data_loader/mnist_utils.jl` are deleted with no
-  successor here: `matrix_assign.jl` held `draw_batch!` alone, and no code called it; MNIST data
-  and the patch utilities are `GMLDatasets`'. `test/data_loader/mnist_utils.jl` is deleted with
-  them. `DataLoader` and `Batch` are this package's exported names, `Batch` new to
+- **The data loader is this package's now: its code arrives from GeometricMachineLearning.**
+  `src/data_loader/data_loader.jl`, `src/data_loader/batch.jl`,
+  `src/data_loader/tensor_assign.jl` and `src/data_loader/parametric_data_loader.jl` are
+  GeometricMachineLearning's files of those names, moved here, with the testsets that exercise
+  them; GeometricMachineLearning removes its copies of all four. This package's own
+  `data_loader.jl`, `batch.jl`, `tensor_assign.jl` and
+  `test/data_loader/draw_batch_for_tensor_test.jl` give way to them.
+  `src/data_loader/matrix_assign.jl` and `src/data_loader/mnist_utils.jl` are
+  deleted with no successor here: `matrix_assign.jl` held `draw_batch!` alone, and no code called
+  it; MNIST data and the patch utilities are `GMLDatasets`'. `test/data_loader/mnist_utils.jl` is
+  deleted with them. `DataLoader` and `Batch` are this package's exported names, `Batch` new to
   `export DataLoader`; `number_of_batches`, `assign_output_estimate`,
-  `convert_input_and_batch_indices_to_array` and `accuracy` are its unexported ones.
+  `convert_input_and_batch_indices_to_array`, `accuracy` and `ParametricDataLoader` are its
+  unexported ones, and `ParametricDataLoader` is `public`: a caller writes
+  `ReducedComplexityModeling.ParametricDataLoader`.
 - `accuracy(::NeuralNetwork, ::DataLoader)` works: `params` is imported from
   AbstractNeuralNetworks, which closes known issue K12. Known issues K2, K3 and K4 leave
   `KNOWN_ISSUES.md` with the code they described.

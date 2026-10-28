@@ -7,7 +7,7 @@ using DocumenterCitations
 
 links = InterLinks(
     "GeometricMachineLearning" => (
-    "https://juliagni.github.io/GeometricMachineLearning.jl/stable",
+    "https://juliagni.github.io/GeometricMachineLearning.jl/stable/",
     "https://juliagni.github.io/GeometricMachineLearning.jl/stable/objects.inv",
     joinpath(@__DIR__, "inventories", "GeometricMachineLearning.toml")
 ),
