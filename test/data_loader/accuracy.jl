@@ -1,7 +1,7 @@
-# `accuracy` is documented API -- the `docs/src/data_loader/data_loader.md` page of
-# GeometricMachineLearning's manual renders both its methods -- and no other function of the package
-# and no script calls it. A documented function with no caller and no test is a function nobody
-# notices breaking, so this file exercises it.
+# `accuracy` is this package's documented API -- its docstrings render in this package's manual
+# through the `@autodocs Modules = [ReducedComplexityModeling]` block of `docs/src/index.md` -- and
+# no other function of the package and no script calls it. A documented function with no caller and
+# no test is a function nobody notices breaking, so this file exercises it.
 #
 # The loader comes from `DataLoader(input, output)`. The output's element type is the input's
 # or an integer, so a real input and an integer one-hot target are one call; any other pair of
