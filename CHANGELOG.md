@@ -38,7 +38,12 @@ holds the changes since the last release until that release is cut.
   as a keyword, so `DataLoader(solution, true)` raises a `MethodError`.
 - **`DataLoader(tensor, labels::AbstractVector)` is gone.** That method preprocessed images for
   MNIST, with `patch_length = 7`; patch the images and build the one-hot target with `GMLDatasets`
-  first, then call `DataLoader(input, output)`, whose output may be an integer array.
+  first, then call `DataLoader(input, output)`, whose output may be an integer array for a tensor,
+  a matrix or a vector input. The fork's pairs took one element type for both arguments, whatever
+  the shape, so an integer output with a real input was a `MethodError` there.
+- **A sample-count mismatch in `DataLoader(input, output)` throws `ArgumentError`.** The third axes
+  of input and output must agree, and the message names both sizes. The fork's `@assert` threw
+  `AssertionError`, so a caller that catches that type must catch `ArgumentError` now.
 - `accuracy` returns `float(T)`, the element type of the loader's input, where the fork returned
   `Float64` whatever the loader held.
 - `accuracy(::NeuralNetwork, ::DataLoader)` works: `params` is imported from
@@ -46,10 +51,17 @@ holds the changes since the last release until that release is cut.
   `KNOWN_ISSUES.md` with the code they described.
 - `ChainRulesCore` leaves `[deps]` and `[compat]`: the fork's `rrule` for `assign_output_estimate`
   was its only use.
-- `[compat] AbstractNeuralNetworks` rises to `"0.9.1"` and `NeuralNetworkParameters` to `"0.5"`.
+- `[compat]`: `AbstractNeuralNetworks` rises to `"0.9.1"`, `NeuralNetworkParameters` to `"0.5"`,
+  `GeometricBase` narrows from `"0.14.6, 0.15"` to `"0.15"`, `GeometricEquations` rises from
+  `"0.21"` to `"0.21.5"`, and `GeometricSolutions` from `"0.6"` to `"0.6.6"`.
   The moved code calls `networkbackend`, `params`, `NamedTupleOfArrays` and `ArrayOrNamedTuple`,
   which AbstractNeuralNetworks 0.9 defines, so an environment on an earlier
-  AbstractNeuralNetworks no longer resolves this release.
+  AbstractNeuralNetworks no longer resolves this release. AbstractNeuralNetworks 0.9.0 caps
+  `NeuralNetworkParameters` at 0.4, and 0.9.1 is the first to allow 0.5. `NeuralNetworkParameters`
+  0.5 requires `GeometricBase` 0.15, and `GeometricEquations` 0.21.5 and `GeometricSolutions` 0.6.6
+  are the first releases that accept `GeometricBase` 0.15, so the old floors could not be resolved
+  alongside it. An environment on `GeometricBase` 0.14 therefore no longer resolves this release,
+  where v0.3.1 allowed it.
 
 ## [0.3.1] — 2026-10-24
 

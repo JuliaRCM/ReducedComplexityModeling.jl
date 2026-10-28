@@ -9,7 +9,7 @@ See [`Batch(::Int)`](@ref) and [`Batch(::Int, ::Int, ::Int)`](@ref) for the diff
 
 An instance of `Batch` can be called on an instance of `DataLoader` to produce a sequence of samples that contain all the input data, i.e. for training for one epoch.
 
-The output of applying `batch:Batch` to `dl::DataLoader` is a vector of vectors of integers. Each of these vectors contains two integers: the first is the *time index* and the second one is the *parameter index*.
+The output of applying `batch::Batch` to `dl::DataLoader` is a vector of minibatches, each a vector of tuples of two integers: the first is the *time index* and the second one is the *parameter index*.
 
 # Examples
 

@@ -239,10 +239,18 @@ end
     @test DataLoader(input, rand(Float32, 3, 1, 6); suppress_info = true) isa DataLoader
     @test DataLoader(zeros(Int, 2, 3, 4), zeros(Int64, 2, 3, 4); suppress_info = true) isa
           DataLoader{Int, Array{Int, 3}, Array{Int64, 3}, :RegularData}
+    # a matrix and a vector input take an integer output too, as one sample
+    @test DataLoader(rand(Float32, 4, 3), zeros(Int, 2, 3); suppress_info = true) isa
+          DataLoader{Float32, Array{Float32, 3}, Array{Int, 3}, :RegularData}
+    @test DataLoader(rand(Float32, 4), zeros(Int, 4); suppress_info = true) isa
+          DataLoader{Float32, Array{Float32, 3}, Array{Int, 3}, :RegularData}
     # two element types of which neither is an integer stay a `MethodError`
     @test_throws MethodError DataLoader(
         rand(Float32, 2, 3, 4), rand(Float64, 2, 3, 4); suppress_info = true)
+    @test_throws MethodError DataLoader(
+        rand(Float32, 2, 3), rand(Float64, 2, 3); suppress_info = true)
+    @test_throws MethodError DataLoader(rand(Float32, 4), rand(Float64, 4); suppress_info = true)
     # the third axis is still the parameter index of both
-    @test_throws AssertionError DataLoader(
+    @test_throws ArgumentError DataLoader(
         rand(Float32, 2, 3, 4), zeros(Int, 3, 1, 5); suppress_info = true)
 end

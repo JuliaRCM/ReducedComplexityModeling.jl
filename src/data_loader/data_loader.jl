@@ -181,7 +181,9 @@ end
 # and `accuracy`'s argument — and any other pair of element types is a `MethodError`.
 function DataLoader(input::AbstractArray{T, 3}, output::AbstractArray{T1, 3};
         suppress_info = false) where {T, T1 <: Union{T, Integer}}
-    @assert size(input, 3) == size(output, 3)
+    size(input, 3) == size(output, 3) || throw(ArgumentError(
+        "the input holds $(size(input, 3)) samples and the output holds $(size(output, 3)); " *
+        "a `DataLoader` takes one output for each input."))
     if !suppress_info
         @info "You have provided an input and an output."
     end
@@ -191,12 +193,14 @@ function DataLoader(input::AbstractArray{T, 3}, output::AbstractArray{T1, 3};
         size(input, 3), size(output, 1), size(output, 2))
 end
 
-function DataLoader(input::AbstractMatrix{T}, output::AbstractMatrix{T}; suppress_info = false) where {T}
+function DataLoader(input::AbstractMatrix{T}, output::AbstractMatrix{T1};
+        suppress_info = false) where {T, T1 <: Union{T, Integer}}
     DataLoader(reshape(input, size(input)..., 1),
         reshape(output, size(output)..., 1); suppress_info = suppress_info)
 end
 
-function DataLoader(input::AbstractVector{T}, output::AbstractVector{T}; suppress_info = false) where {T}
+function DataLoader(input::AbstractVector{T}, output::AbstractVector{T1};
+        suppress_info = false) where {T, T1 <: Union{T, Integer}}
     DataLoader(reshape(input, 1, length(input)),
         reshape(output, 1, length(output)); suppress_info = suppress_info)
 end
@@ -276,7 +280,7 @@ end
 
 Make an instance of `DataLoader` for a `GeometricSolution`.
 
-`GeometricSolution`s are imported from the the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
+`GeometricSolution`s are imported from the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
 
 # Arguments
 
@@ -310,9 +314,9 @@ end
 """
     DataLoader(ensemble_solution)
 
-Make an instance of `DataLoader` for a `EnsembleSolution`.
+Make an instance of `DataLoader` for an `EnsembleSolution`.
 
-`EnsembleSolution`s are imported from the the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
+`EnsembleSolution`s are imported from the package [`GeometricSolutions.jl`](https://github.com/JuliaGNI/GeometricSolutions.jl).
 
 # Arguments
 
@@ -378,7 +382,7 @@ If you want to change the data type write e.g.
 There is an optional keyword argument
 - `autoencoder = nothing`.
 
-By default this inherits the autoencoder property form `dl`.
+By default this inherits the autoencoder property from `dl`.
 
 See the docstring for [`DataLoader(data::AbstractArray{<:Number, 3})`](@ref).
 """
@@ -435,7 +439,7 @@ end
 
 Compute the accuracy of a neural network classifier.
 
-This is like [`accuracy(::Chain, ::Tuple, ::DataLoader)`](@ref), but for a `NeuralNetwork`.
+This is like [`accuracy(::Chain, ::NetworkParameters, ::DataLoader)`](@ref), but for a `NeuralNetwork`.
 """
 accuracy(nn::NeuralNetwork, dl::DataLoader) = accuracy(nn.model, params(nn), dl)
 

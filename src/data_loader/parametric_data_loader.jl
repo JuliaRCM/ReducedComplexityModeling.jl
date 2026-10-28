@@ -1,7 +1,7 @@
-# `ParametricLoss`, `apply_parametric` and `train!` are GeometricMachineLearning's names, and the
-# inventory of that manual which this manual reads defines none of them, so the docstring below
-# writes them as code spans. `train!` would otherwise resolve to this package's own `train!`, to
-# which the loader's method does not belong.
+# `ParametricLoss` and `apply_parametric` are GeometricMachineLearning's names, and the inventory of
+# that manual which this manual reads defines neither, so the docstring below writes them as code
+# spans. `train!` is a code span too: the method the docstring names is GeometricMachineLearning's,
+# and a link would land on this package's generic `train!`, whose docstring documents no such method.
 @doc raw"""
     ParametricDataLoader(data, parameters)
     ParametricDataLoader(ensemble_solution)

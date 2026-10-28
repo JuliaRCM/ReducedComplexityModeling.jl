@@ -69,13 +69,15 @@
 
 - **Location:** `src/ReducedComplexityModeling.jl:4`, the dependency imports, and their uses in
   included source files.
-- **Evidence:** on Julia 1.13.1, ExplicitImports 1.15.0,
-  `print_explicit_imports(ReducedComplexityModeling; report_non_public = true)` reports 31
-  implicitly imported names, 3 non-public explicit imports (`AbstractDataType`, `AbstractSystem`,
-  `H5DataStore`), and 9 non-public qualified accesses.
+- **Evidence:** on Julia 1.13.3, ExplicitImports 1.15.0,
+  `print_explicit_imports(ReducedComplexityModeling; report_non_public = true)` reports 25
+  implicitly imported names, 5 non-public explicit imports (`AbstractDataType`, `AbstractSystem`,
+  `ArrayOrNamedTuple`, `H5DataStore`, `NamedTupleOfArrays`), and 8 non-public qualified accesses.
   `test_explicit_imports(ReducedComplexityModeling)` fails the implicit-import, public-import and
-  public-qualified-access checks. The import statements are present at merge base `3b0554e`;
-  the `Chain` and `NeuralNetwork` imports have no diagnostic.
+  public-qualified-access checks. `ArrayOrNamedTuple` and `NamedTupleOfArrays` are imported at
+  `src/ReducedComplexityModeling.jl:26`, for the data loader's dispatch; the other import
+  statements are present at merge base `3b0554e`. The `Chain` and `NeuralNetwork` imports have no
+  diagnostic.
 - **Kind:** defect
 - **Found:** 2026-10-11 (pre-PR verification of `compat/ann-0.8`)
 
