@@ -14,23 +14,25 @@ using KernelAbstractions
 using AbstractNeuralNetworks: Chain, NeuralNetwork
 using NeuralNetworkParameters: NetworkParameters
 
-# DataLoader dispatches on (q, p) pairs of arrays with matching types, or on a single array.
-const QPT{T} = NamedTuple{(:q, :p), Tuple{AT, AT}} where {T, AT <: AbstractArray{T}}
-const QPTOAT{T} = Union{QPT{T}, AbstractArray{T}} where {T}
+# The input and output types of a network: `NamedTupleOfArrays{T, (:q, :p)}` is data in `(q, p)`
+# form and `ArrayOrNamedTuple{T}` is an array or a named tuple of arrays. The data loader dispatches
+# on them, and the package that owns them does not export either.
+using AbstractNeuralNetworks: NamedTupleOfArrays, ArrayOrNamedTuple
+# `networkbackend` is a loader's backend and `params` a network's parameters: both are generics of a
+# dependency rather than functions of this package. `params` is NeuralNetworkParameters', which
+# AbstractNeuralNetworks re-exports.
+import AbstractNeuralNetworks: networkbackend, params
 
 import GeometricBase: state_symbols
-import ChainRulesCore
-using ChainRulesCore: @thunk, Thunk
 
-export DataLoader
+export DataLoader, Batch
 
 # needed for shuffle function
 import Random
+import Random: shuffle
 
 include("data_loader/data_loader.jl")
 include("data_loader/tensor_assign.jl")
-include("data_loader/matrix_assign.jl")
-include("data_loader/mnist_utils.jl")
 include("data_loader/batch.jl")
 
 include("TrainingData/TrainingData.jl")

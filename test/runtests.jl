@@ -11,8 +11,12 @@ if "core" in GROUPS
     @safetestset "Parameter spaces" include("parameters/parameterspace.jl")
     @safetestset "TrainingData" include("TrainingData/TrainingData.jl")
     @safetestset "TrainingProblem" include("TrainingProblem.jl")
-    @safetestset "MNIST utilities" include("data_loader/mnist_utils.jl")
+    @safetestset "The loader's names and extension points" include("data_loader/data_loader.jl")
     @safetestset "Data loader for a tensor" include("data_loader/draw_batch_for_tensor_test.jl")
+    @safetestset "Batch functor(s)" include("data_loader/batch_functor.jl")
+    @safetestset "The minibatch index set is concrete and grows linearly" include("data_loader/batch_index_set.jl")
+    @safetestset "An unexpected `autoencoder` keyword throws rather than returning nothing" include("data_loader/autoencoder_keyword.jl")
+    @safetestset "Classifier accuracy" include("data_loader/accuracy.jl")
     @safetestset "POD of the Lorenz system" include("integration/pod_lorenz.jl")
 end
 if "doctests" in GROUPS

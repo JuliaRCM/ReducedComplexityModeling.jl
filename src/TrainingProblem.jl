@@ -67,9 +67,9 @@ end
 astuple(::NamedTuple{K}, x) where {K} = NamedTuple{K}(ntuple(i -> x[i], Val(length(K))))
 
 """
-    train!(model, problem::TrainingProblem, method)
+    train!(model, …)
 
-Train `model` in place on `problem` and return the loss history.
+Train `model` in place and return the loss history.
 
 The in-place companion of [`train`](@ref): where `train` builds a model from the data and returns
 the fitted parameters, `train!` updates a model the caller already holds and returns the loss at

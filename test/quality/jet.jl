@@ -1,32 +1,30 @@
 using ReducedComplexityModeling
 using ReducedComplexityModeling: Batch, DataLoader,
                                  convert_input_and_batch_indices_to_array,
-                                 onehotbatch, split_and_flatten,
-                                 assign_input_from_vector_of_tuples_kernel!,
-                                 assign_output_from_vector_of_tuples_kernel!,
-                                 assign_val_kernel!, split_and_flatten_kernel!
+                                 assign_output_estimate, gather_kernel!
 using KernelAbstractions: KernelAbstractions, CPU
 using JET
 using Test
 
+include("../helpers/eltypes.jl")
+
 # Each launcher line analyses one function that launches a kernel, on the `CPU()` backend of
-# KernelAbstractions. The element types are those that a test in `test/` outside
-# `test/quality/` passes to the launcher: `Float64` for `convert_input_and_batch_indices_to_array`
-# and `Int` for `onehotbatch`. No test calls `split_and_flatten` directly; its `Float32` line
-# follows `DataLoader(data, target)` in `test/data_loader/mnist_utils.jl`. The `Int` of its
-# doctest is in `test/quality/` and gets no line. The `RegularArray` and `Batch{:FeedForward}`
-# line takes its argument types from the doctest of `convert_input_and_batch_indices_to_array`,
-# the only test that calls the launcher at that `DataLoader` type.
+# KernelAbstractions. The element types are those that a test in `test/` outside `test/quality/`
+# passes to the launcher. The `RegularArray` and `Batch{:FeedForward}` line takes its argument types
+# from the doctest of `convert_input_and_batch_indices_to_array`, the only test that calls the
+# launcher at that `DataLoader` type.
 const TimeSeriesQP = DataLoader{
-    Float64, @NamedTuple{q::Array{Float64, 3}, p::Array{Float64, 3}}, Nothing, :TimeSeries}
-const RegularArray = DataLoader{Float64, Array{Float64, 3}, Nothing, :RegularData}
+    Float64, @NamedTuple{q::Array{Float64, 3}, p::Array{Float64, 3}}, Nothing, :TimeSeries,
+    Nothing}
+const RegularArray = DataLoader{Float64, Array{Float64, 3}, Nothing, :RegularData, Nothing}
 const Indices = Vector{Tuple{Int, Int}}
+const A3{T} = Array{T, 3}
 const RCM = (ReducedComplexityModeling,)
 
-# JET drops the reports of a kernel body when it analyses the launcher, so each `@kernel`
-# also gets a line that analyses the generated `cpu_<kernel>` function directly, at the
-# `CompilerMetadata` context that the launcher builds. This uses internals of
-# KernelAbstractions (`launch_config`, `mkcontext`, `blocks`, `Kernel.f`).
+# JET drops the reports of a kernel body when it analyses the launcher, so each `@kernel` also gets a
+# line that analyses the generated `cpu_<kernel>` function directly, at the `CompilerMetadata`
+# context that the launcher builds. This uses internals of KernelAbstractions (`launch_config`,
+# `mkcontext`, `blocks`, `Kernel.f`).
 function kernel_body_reports(kernel, ndrange, args...)
     k = kernel(CPU())
     nd, _, iterspace, dynamic = KernelAbstractions.launch_config(k, ndrange, nothing)
@@ -39,32 +37,60 @@ end
 @testset "JET" begin
     if isdefined(JET, :JET_AVAILABLE) ? JET.JET_AVAILABLE : JET.JET_LOADABLE
         # src/data_loader/batch.jl
+        indices = ones(Int, 2, 4)
+        # test/data_loader/draw_batch_for_tensor_test.jl: the `(q, p)` loader of the verbatim call
         @test isempty(JET.get_reports(JET.report_opt(
             convert_input_and_batch_indices_to_array,
             (TimeSeriesQP, Batch{:Transformer}, Indices); target_modules = RCM)))
+        # the one gather kernel of a `(q, p)` input: `gather` launches it once per tensor
+        @test isempty(kernel_body_reports(gather_kernel!,
+            (2, 3, 4), zeros(2, 3, 4), zeros(2, 8, 4), indices, 3))
+        # test/data_loader/draw_batch_for_tensor_test.jl: the tensor loader of both precisions
+        for T in REAL_ELTYPES
+            @test isempty(JET.get_reports(JET.report_opt(
+                convert_input_and_batch_indices_to_array,
+                (DataLoader{T, A3{T}, Nothing, :TimeSeries, Nothing},
+                    Batch{:Transformer}, Indices); target_modules = RCM)))
+            # the gather kernel, once per element type
+            @test isempty(kernel_body_reports(gather_kernel!,
+                (2, 3, 4), zeros(T, 2, 3, 4), zeros(T, 2, 8, 4), indices, 3))
+        end
+        # the doctest of `convert_input_and_batch_indices_to_array`, a `:RegularData` loader without
+        # an output
         @test isempty(JET.get_reports(JET.report_opt(
             convert_input_and_batch_indices_to_array,
             (RegularArray, Batch{:FeedForward}, Indices); target_modules = RCM)))
-        a = zeros(2, 3, 4)
-        qp = (q = zeros(2, 8, 4), p = zeros(2, 8, 4))
-        indices = ones(Int, 2, 4)
-        @test isempty(kernel_body_reports(
-            assign_input_from_vector_of_tuples_kernel!, size(a), a, copy(a), qp, indices))
-        @test isempty(kernel_body_reports(
-            assign_input_from_vector_of_tuples_kernel!, size(a), a, zeros(2, 8, 4), indices))
-        @test isempty(kernel_body_reports(
-            assign_output_from_vector_of_tuples_kernel!, size(a), a, copy(a), qp, indices, 3))
-
-        # src/data_loader/mnist_utils.jl
-        @test isempty(JET.get_reports(JET.report_opt(onehotbatch, (Vector{Int},);
-            target_modules = RCM)))
+        # a loader with an output, of kind `:TimeSeries`: no loader of the suite has this type.
+        # `DataLoader(input, output)` builds `:RegularData`, and each `:TimeSeries` loader with an
+        # output that a test builds by naming the type has an `Array{Int, 3}` output
         @test isempty(JET.get_reports(JET.report_opt(
-            split_and_flatten, (Array{Float32, 3},);
+            convert_input_and_batch_indices_to_array,
+            (DataLoader{Float32, A3{Float32}, A3{Float32}, :TimeSeries, Int},
+                Batch{:FeedForward}, Indices);
             target_modules = RCM)))
-        @test isempty(kernel_body_reports(assign_val_kernel!, 4, zeros(Int, 10, 4), [
-            1, 2, 5, 0]))
-        @test isempty(kernel_body_reports(split_and_flatten_kernel!, (28, 28, 2),
-            zeros(Float32, 49, 16, 2), zeros(Float32, 28, 28, 2), 7, 16))
+        # the `Batch` functor under `@allocated` in test/data_loader/batch_index_set.jl, and at the
+        # element types its other direct calls make: `Int` in test/data_loader/batch_functor.jl and
+        # in the doctest of the launcher above
+        @test isempty(JET.get_reports(JET.report_opt(Batch(8),
+            (DataLoader{Float32, A3{Float32}, Nothing, :TimeSeries, Nothing},);
+            target_modules = RCM)))
+        @test isempty(JET.get_reports(JET.report_opt(Batch(3),
+            (DataLoader{Int, A3{Int}, Nothing, :TimeSeries, Nothing},);
+            target_modules = RCM)))
+        @test isempty(JET.get_reports(JET.report_opt(Batch(10, 16), (TimeSeriesQP,);
+            target_modules = RCM)))
+        # `Batch(batch_size, dl)` reads the loader's own two lengths, and
+        # test/data_loader/draw_batch_for_tensor_test.jl calls it on a classifier's loader
+        @test isempty(JET.get_reports(JET.report_opt(Batch(2),
+            (DataLoader{Float32, A3{Float32}, A3{Int}, :RegularData, Int},);
+            target_modules = RCM)))
+
+        # src/data_loader/tensor_assign.jl: `assign_output_estimate` in
+        # test/data_loader/accuracy.jl, in both precisions
+        for T in REAL_ELTYPES
+            @test isempty(JET.get_reports(JET.report_opt(assign_output_estimate,
+                (A3{T}, Int); target_modules = RCM)))
+        end
     else
         @test_skip "JET does not work on Julia $(VERSION)"  # aviatesk/JET.jl#681
     end

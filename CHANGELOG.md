@@ -10,8 +10,32 @@ This file was started on 2026-08-31 and deliberately holds no entries. 2 version
 released before it, the most recent `v0.1.1`, and neither is written up here: the record of
 that history is `git log` and the tags. It is named as a gap rather than reconstructed,
 because a changelog assembled after the fact loses exactly the reasoning that makes it worth
-keeping. The `[Unreleased]` target below is provisional — confirm it when the first entry is
-written.
+keeping. The `[Unreleased]` section below holds the changes since the last release until that
+release is cut.
+
+## [Unreleased]
+
+### Breaking Changes
+
+- **The data loader is GeometricMachineLearning's, and this package's fork is gone.**
+  `src/data_loader/data_loader.jl`, `src/data_loader/batch.jl`, `src/data_loader/tensor_assign.jl`
+  and `test/data_loader/draw_batch_for_tensor_test.jl` — this package's own files — give way to
+  GeometricMachineLearning's files of the same names, which it no longer carries.
+  `src/data_loader/matrix_assign.jl` and `src/data_loader/mnist_utils.jl` are deleted with no
+  successor here: `matrix_assign.jl` held `draw_batch!` alone, and no code called it; MNIST data
+  and the patch utilities are `GMLDatasets`'. `test/data_loader/mnist_utils.jl` is deleted with
+  them. `DataLoader` and `Batch` are this package's exported names, `Batch` new to
+  `export DataLoader`; `number_of_batches`, `assign_output_estimate`,
+  `convert_input_and_batch_indices_to_array` and `accuracy` are its unexported ones.
+- `accuracy(::NeuralNetwork, ::DataLoader)` works: `params` is imported from
+  AbstractNeuralNetworks, which closes known issue K12. Known issues K2, K3 and K4 leave
+  `KNOWN_ISSUES.md` with the code they described.
+- `ChainRulesCore` leaves `[deps]` and `[compat]`: the fork's `rrule` for `assign_output_estimate`
+  was its only use.
+- `[compat] AbstractNeuralNetworks` rises to `"0.9.1"` and `NeuralNetworkParameters` to `"0.5"`,
+  the bounds that resolve beside GeometricMachineLearning 0.9, whose types the moved code
+  dispatches on. An environment on an earlier AbstractNeuralNetworks no longer resolves this
+  release.
 
 ## [0.3.1] — 2026-10-24
 
