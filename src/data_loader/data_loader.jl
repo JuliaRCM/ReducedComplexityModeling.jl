@@ -263,6 +263,15 @@ function data_tensor(trajectories::AbstractVector)
     data
 end
 
+"""
+    data_tensors_from_geometric_solution(solution)
+
+The data of one `GeometricSolution` as the tensors a [`DataLoader`](@ref) takes, with the axes
+`(system dimension, time steps, 1)`.
+
+A solution with the fields `(:t, :q, :p, :q̇, :ṗ)` gives the named tuple `(q = ..., p = ...)`, and
+one with `(:t, :q, :v)` or `(:t, :q, :q̇)` gives the tensor of `q`.
+"""
 function data_tensors_from_geometric_solution(
         solution::GeometricSolution{
         <:Number, <:Number, <:Any, <:NamedTuple{(:t, :q, :p, :q̇, :ṗ)}})
@@ -340,9 +349,14 @@ function DataLoader(ensemble_solution::EnsembleSolution{T, T1, Vector{ST}};
         autoencoder = autoencoder, suppress_info = suppress_info)
 end
 
-# An array already on the backend is returned as it is. `Base.copyto!` carries a host array to any
-# backend; `KernelAbstractions.copyto!` has a method for the CPU alone, and a device backend such as
-# `JLArray`'s has none.
+# `Base.copyto!` carries a host array to any backend; `KernelAbstractions.copyto!` has a method for
+# the CPU alone, and a device backend such as `JLArray`'s has none.
+"""
+    map_to_new_backend(input, backend)
+
+Move an array, or each array of a `(q, p)` named tuple, to a KernelAbstractions `backend`. An array
+that is already on `backend` is returned as it is.
+"""
 function map_to_new_backend(input::AbstractArray{T},
         backend::KernelAbstractions.Backend) where {T}
     networkbackend(input) == backend && return input
@@ -356,6 +370,11 @@ function map_to_new_backend(input::NamedTupleOfArrays, backend::KernelAbstractio
     map(tensor -> map_to_new_backend(tensor, backend), input)
 end
 
+"""
+    map_to_type(input, T)
+
+Convert an array, or each array of a `(q, p)` named tuple, to the element type `T`.
+"""
 map_to_type(input::AbstractArray, ::Type{T}) where {T} = T.(input)
 
 function map_to_type(input::NamedTupleOfArrays, ::Type{T}) where {T}

@@ -5,6 +5,12 @@ function _name(h5::H5DataStore)
 end
 
 # a new group tracks the creation order of its links, so `keys` returns them in the order written
+"""
+    _create_group(h5, name)
+
+The group `name` of `h5`: the existing one if there is one, else a new group that tracks the
+creation order of its links, so that `keys` returns them in the order written.
+"""
 function _create_group(h5::H5DataStore, name)
     if haskey(h5, name)
         g = h5[name]
@@ -15,7 +21,11 @@ function _create_group(h5::H5DataStore, name)
 end
 
 """
-save parameters
+    save_parameters(h5, params; path = "/")
+    save_parameters(fpath, params)
+
+Write each entry of the named tuple `params` as a dataset of the group `path` of `h5`. With a file
+path, open `fpath` and write to its group `"parameters"`.
 """
 function save_parameters(h5::H5DataStore, params::NamedTuple; path::AbstractString = "/")
     g = _create_group(h5, path)
@@ -32,7 +42,11 @@ function save_parameters(fpath::AbstractString, params::NamedTuple)
 end
 
 """
-read parameters
+    read_parameters(h5, path = "/")
+    read_parameters(fpath)
+
+Read the datasets of the group `path` of `h5` into a named tuple. With a file path, read the group
+`"parameters"` of `fpath`.
 """
 function read_parameters(h5::H5DataStore, path::AbstractString = "/")
     group = h5[path]
