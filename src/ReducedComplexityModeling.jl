@@ -38,6 +38,15 @@ export DataLoader, Batch
 # parameters is available without growing the export list.
 public ParametricDataLoader
 
+# The routines that GeometricMachineLearning and ReducedBasisMethods call, and that a caller can
+# name without owning the loader: the loader's batch and tensor routines, the conversions to a type
+# and to a backend, the accuracy of a network on a loader, and the HDF5 helpers that a package
+# with its own data type writes its groups with.
+public number_of_batches, accuracy
+public assign_output_estimate, convert_input_and_batch_indices_to_array
+public data_tensors_from_geometric_solution, map_to_type, map_to_new_backend
+public save_parameters, read_parameters, _create_group
+
 # needed for shuffle function
 import Random
 import Random: shuffle

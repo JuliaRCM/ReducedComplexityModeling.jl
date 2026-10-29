@@ -12,6 +12,22 @@ tags. It is named as a gap rather than reconstructed, because a changelog assemb
 fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
 holds the changes since the last release until that release is cut.
 
+## [Unreleased] — targeting 0.4.1
+
+### Changed
+
+- Ten names are declared `public`: `number_of_batches`, `accuracy`, `assign_output_estimate`,
+  `convert_input_and_batch_indices_to_array`, `data_tensors_from_geometric_solution`, `map_to_type`,
+  `map_to_new_backend`, `save_parameters`, `read_parameters` and `_create_group`. These are the names
+  that GeometricMachineLearning and ReducedBasisMethods import or call. They were neither exported
+  nor `public` before, so a check that every import of those packages is `public`
+  (ExplicitImports' `check_all_explicit_imports_are_public`) reports them. Nothing is exported and
+  no function changes behaviour. `ParametricDataLoader` was already `public`. `_create_group` keeps
+  its underscore name; it is declared `public` but not renamed.
+- `data_tensors_from_geometric_solution`, `map_to_type`, `map_to_new_backend` and `_create_group`
+  gain docstrings. `save_parameters` and `read_parameters` replace their placeholder docstrings
+  with real ones.
+
 ## [0.4.0] — 2026-10-28
 
 ### Breaking Changes
