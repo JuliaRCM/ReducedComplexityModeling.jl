@@ -137,6 +137,8 @@ end
         end
         @test collect(Parameter(name, 0.1f0, 0.1f0, 6)) == Float32[0.1]
         @test collect(Parameter(name, 0.1, 0.1, 0)) == Float64[]
+        @test collect(Parameter(name, 1, 1, 3)) == [1]
+        @test collect(Parameter(name, 1, 1, 0)) == Int[]
         @test_throws MethodError Parameter(name, 0, 1, 3)
     end
 end

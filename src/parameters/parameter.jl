@@ -49,7 +49,8 @@ function Parameter(name, minimum::DT, maximum::DT) where {DT}
 end
 function Parameter(name, minimum::DT, maximum::DT, n::Int) where {DT}
     # `LinRange(0.1, 0.1, 6)` holds `0.10000000000000002`, so equal bounds give their one sample
-    samples = n > 0 && minimum == maximum ? [minimum] : LinRange(minimum, maximum, n)
+    samples = minimum == maximum && n ≥ 0 ? fill(minimum, min(n, 1)) :
+              LinRange(minimum, maximum, n)
     Parameter(name, minimum, maximum, samples)
 end
 function Parameter(name, samples::AbstractVector)
