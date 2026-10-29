@@ -17,9 +17,10 @@ samples between them. `name` is a `Symbol` or a string, which is converted to a 
 
 The bounds have one type `DT`, and the samples have element type `DT`. The samples are stored
 sorted and without duplicates. Without samples, `samples` is `nothing`. With a count `n`, the
-samples are the `n` points of `LinRange(minimum, maximum, n)`; their element type is that of the
-bounds only for floating-point bounds, so integer bounds with a count throw a `MethodError`. With
-only a vector of samples, the bounds are its smallest and largest entry.
+samples are the `n` points of `LinRange(minimum, maximum, n)`. This works for bounds of a type
+that `LinRange` keeps, such as a float or a `Rational`; integer bounds with a count throw a
+`MethodError`, because their `LinRange` has a float element type. With only a vector of samples,
+the bounds are its smallest and largest entry.
 
 `minimum > maximum`, or a sample outside `[minimum, maximum]`, throws an `AssertionError`.
 """

@@ -158,3 +158,25 @@
   finds the file of another. A test run in one process does not show it.
 - **Kind:** defect
 - **Found:** 2026-10-29
+
+### K20 · The reduced-basis integration test asserts nothing
+
+- **Location:** `test/integration/pod_lorenz.jl`, the calls `reduce!(model, k, alg)`,
+  `compose(prob, model)` and `project(red_sol, model)`.
+- **Evidence:** `grep -c '@test' test/integration/pod_lorenz.jl` gives `0`. The script fails only
+  when one of these calls throws, so a `reduce!`, `compose` or `project` that returns a wrong basis
+  or a wrong state passes it. A test that compares `project(red_sol, model)` with `sol.q` to a
+  stated tolerance would catch such a change.
+- **Kind:** missing test
+- **Found:** 2026-10-29 (critic round 1a)
+
+### K21 · The docstrings of `h5save` and `h5load` name only the `ParameterSpace` method
+
+- **Location:** `src/parameters/parameterspace.jl`, the docstrings `save ParameterSpace` and
+  `Load ParameterSpace`.
+- **Evidence:** each name has three methods: the `ParameterSpace` method there, the `Parameter`
+  method in `src/parameters/parameter.jl` and the file-path method in
+  `src/parameters/h5routines.jl`. Only the `ParameterSpace` method has a docstring, and it gives
+  neither the arguments nor the other two forms.
+- **Kind:** docs
+- **Found:** 2026-10-29 (critic rounds 1a and 1b)
