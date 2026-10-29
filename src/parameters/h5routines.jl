@@ -44,8 +44,8 @@ end
     read_parameters(h5, path = "/")
     read_parameters(fpath)
 
-Read the datasets of the group `path` of `h5` into a named tuple. With a file path, read the group
-`"parameters"` of `fpath`.
+Read the datasets of the group `path` of `h5` into a named tuple. A child group is read as a
+`Dict{String, Any}`. With a file path, read the group `"parameters"` of `fpath`.
 """
 function read_parameters(h5::H5DataStore, path::AbstractString = "/")
     group = h5[path]
