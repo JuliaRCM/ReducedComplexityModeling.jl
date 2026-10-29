@@ -24,23 +24,30 @@ holds the changes since the last release until that release is cut.
 
 - `Parameter` takes a `Symbol` or a string name in every constructor form. The call
   `Parameter("μ", minimum, maximum, n)` returns a `Parameter` whose samples are those of
-  `LinRange(minimum, maximum, n)`, without duplicates, so equal bounds give one sample. It threw a
-  `MethodError` before, because two methods matched it equally well. This relates to issue #38: the
-  two string-name methods that clashed are deleted, and `detect_ambiguities(ReducedComplexityModeling)`
-  reports no ambiguity. A gap remains: integer bounds with a sample count still throw a
-  `MethodError`, because the `LinRange` of integers has a float element type, so
-  `Parameter(:a, 0, 10, 5)` throws.
+  `LinRange(minimum, maximum, n)` when the bounds differ, without duplicates. Equal bounds and a
+  positive count give the one sample `minimum`. A count of 0 gives no sample. It threw a
+  `MethodError` before, because two methods matched it equally well. This relates to issue #38:
+  the two string-name methods that clashed are deleted, and
+  `detect_ambiguities(ReducedComplexityModeling)` reports no ambiguity. A gap remains: unequal
+  integer bounds with a sample count still throw a `MethodError`. Their `LinRange` has a float
+  element type, so `Parameter(:a, 0, 10, 5)` throws.
 
 - `GeometricIntegratorEnsembleData(solutions, Independent())` builds its snapshot (K16). It threw
   an `ErrorException` before. The snapshot is an array of size `ny × nx × ns`, for `ns` solutions
   with `nx` entries of a state `q` with `ny` components. Its slice `[:, :, i]` is the snapshot
   matrix of solution `i`, in the layout of `GeometricIntegratorData`. Solutions with different
-  numbers of entries in `q` throw an `ArgumentError`.
+  numbers of entries in `q` throw an `ArgumentError`. Solutions with different numbers of
+  components of `q` also throw an `ArgumentError`.
 
 - `GeometricIntegratorEnsembleData(solutions, Dependent())` sizes its snapshot from the total number
   of entries of all solutions. It was sized from the first solution alone: a later solution with
   fewer entries left zero-filled trailing columns, and one with more entries threw a `BoundsError`.
   The solutions may now have different numbers of entries in `q`.
+
+- In both layouts, the snapshot of `GeometricIntegratorEnsembleData` has the `promote_type` of
+  the element types of the states `q` of all solutions. A `Float32` solution followed by a
+  `Float64` solution gives a `Float64` snapshot, so a value of `1e40`, which is above
+  `floatmax(Float32)`, is kept. The order of the columns is unchanged.
 
 - `GeometricIntegratorEnsembleData` and both `Base.Array(solutions, ::Dependent)` and
   `Base.Array(solutions, ::Independent)` take a vector with a concrete element type, such as
@@ -57,7 +64,11 @@ holds the changes since the last release until that release is cut.
   `reduce!`, `compose`, `project`, `hassamples`, `GeometricIntegratorData`,
   `GeometricIntegratorEnsembleData`, `Dependent` and `Independent` gain one. The exports test
   requires the docstring of every exported or public name to contain that name. The docstrings of
-  `h5save` and `h5load` name their three methods and their arguments (K21), and the docstring of
+  `h5save` and `h5load` name their three methods and their arguments (K21). Each shows a round
+  trip, as a doctest. `h5save` writes a `ParameterSpace`, and `h5load` reads it back.
+  `h5save(file, p)` writes a `Parameter` `p` to the group of its name.
+  `h5load(Parameter, file; path = string(p.name))` reads it back. With the default
+  `path = "/"`, `h5load(Parameter, file)` throws a `KeyError`. The docstring of
   `ReducedBasisModel` no longer names packages that are not dependencies of this package.
 
 ## [0.4.1] — 2026-10-29

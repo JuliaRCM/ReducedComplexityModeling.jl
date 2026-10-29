@@ -77,6 +77,17 @@ per parameter to the subgroup `samples`, and each of its parameters to the subgr
 A [`Parameter`](@ref) writes the datasets `minimum`, `maximum` and, if it has samples, `samples`.
 With a file path, open the file `fpath` in `mode` and write `data` to it. [`h5load`](@ref) reads
 the data back.
+
+```jldoctest
+julia> ps = ParameterSpace(Parameter(:μ, 0.0, 1.0, 3), Parameter(:ν, 1.0, 2.0, 2));
+
+julia> file = joinpath(mktempdir(), "parameterspace.h5");
+
+julia> h5save(file, ps);
+
+julia> h5load(ParameterSpace, file) == ps
+true
+```
 """
 function h5save(h5::H5DataStore, ps::ParameterSpace; path::AbstractString = "/")
     cols = columns(ps.samples)
@@ -100,6 +111,20 @@ end
 Read a [`ParameterSpace`](@ref) or a [`Parameter`](@ref) from the group `path` of `h5`, in the
 layout that [`h5save`](@ref) writes. A parameter takes the name of its group. With a file path,
 open the file `fpath` in `mode` and read a `T` from it.
+
+`h5save` writes a parameter `p` to the group of its name, so read it back with
+`path = string(p.name)`:
+
+```jldoctest
+julia> p = Parameter(:μ, 0.0, 1.0, 3);
+
+julia> file = joinpath(mktempdir(), "parameter.h5");
+
+julia> h5save(file, p);
+
+julia> h5load(Parameter, file; path = string(p.name)) == p
+true
+```
 """
 function h5load(::Type{ParameterSpace}, h5::H5DataStore; path::AbstractString = "/")
     ParameterSpace(h5, path)

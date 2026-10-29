@@ -129,6 +129,14 @@ end
     for name in (:μ, "μ")
         @test collect(Parameter(name, 1.0, 1.0, 5)) == [1.0]
         @test length(Parameter(name, 1.0, 1.0, 5)) == 1
+        # `LinRange(0.1, 0.1, n)` rounds above the bounds for these counts
+        for n in (6, 8, 11, 15)
+            p = Parameter(name, 0.1, 0.1, n)
+            @test p isa Parameter{Float64, Vector{Float64}}
+            @test collect(p) == [0.1]
+        end
+        @test collect(Parameter(name, 0.1f0, 0.1f0, 6)) == Float32[0.1]
+        @test collect(Parameter(name, 0.1, 0.1, 0)) == Float64[]
         @test_throws MethodError Parameter(name, 0, 1, 3)
     end
 end

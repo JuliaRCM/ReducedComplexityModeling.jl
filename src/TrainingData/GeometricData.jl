@@ -53,15 +53,20 @@ The layout of the snapshot of a [`GeometricIntegratorEnsembleData`](@ref) in whi
 keeps its own snapshot, along a third dimension: an array of size `ny × nx × ns`, for `ns`
 solutions with `nx` entries of a state `q` with `ny` components. Its slice `[:, :, i]` is the
 snapshot matrix of solution `i`, in the layout of [`GeometricIntegratorData`](@ref). All
-solutions must have the same number of entries in `q`; otherwise the constructor throws an
-`ArgumentError`.
+solutions must have the same number of entries in `q` and the same number of components of `q`;
+otherwise the constructor throws an `ArgumentError`.
 """
 struct Independent <: AbstractDependence end
+
+# the element type that holds the state `q` of every solution without loss
+function _snapshot_eltype(solutions)
+    mapreduce(solution -> eltype(solution.q[1]), promote_type, solutions)
+end
 
 function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Dependent)
     nx = sum(solution -> length(solution.q), solutions)
     ny = length(solutions[1].q[1])
-    Z = zeros(eltype(solutions[1].q[1]), nx, ny)
+    Z = zeros(_snapshot_eltype(solutions), nx, ny)
 
     i = 1
     for solution in solutions
@@ -79,7 +84,9 @@ function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Independen
     ny = length(solutions[1].q[1])
     all(solution -> length(solution.q) == nx, solutions) ||
         throw(ArgumentError("the Independent layout needs solutions with equal numbers of entries"))
-    Z = zeros(eltype(solutions[1].q[1]), nx, ny, ns)
+    all(solution -> length(solution.q[1]) == ny, solutions) ||
+        throw(ArgumentError("the Independent layout needs solutions with equal state dimensions"))
+    Z = zeros(_snapshot_eltype(solutions), nx, ny, ns)
 
     for (i, solution) in enumerate(solutions)
         for (j, elem) in enumerate(solution.q)
@@ -93,7 +100,8 @@ end
     GeometricIntegratorEnsembleData(solutions::AbstractVector{<:GeometricSolution}, deps)
 
 The solutions of an ensemble of geometric integrations and their snapshot, in the layout that
-`deps` selects: [`Dependent`](@ref) or [`Independent`](@ref).
+`deps` selects: [`Dependent`](@ref) or [`Independent`](@ref). The element type of the snapshot
+is the promotion of the element types of the states `q` of all solutions.
 """
 struct GeometricIntegratorEnsembleData
     solutions::Vector{GeometricSolution}

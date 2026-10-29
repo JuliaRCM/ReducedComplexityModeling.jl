@@ -24,6 +24,33 @@ sol3 = oscillator_solution([3.0, 1.0], 0.05)
 
     @test_throws ArgumentError GeometricIntegratorEnsembleData(
         RCM.GeometricSolution[sol1, sol3], Independent())
+
+    # a solution with one component after one with two
+    decay!(v, t, q, params) = (v[1] = -q[1])
+    sol1d = integrate(ODEProblem(decay!, (0.0, 0.1), 0.01, [1.0]), ExplicitEuler())
+    @test length(sol1d.q) == length(sol1.q)
+    @test_throws ArgumentError GeometricIntegratorEnsembleData(
+        RCM.GeometricSolution[sol1, sol1d], Independent())
+end
+
+@testset "The snapshot promotes the element types of all solutions" begin
+    # 1e40 overflows to Inf in Float32
+    sol32 = integrate(ODEProblem(oscillator!, (0.0f0, 0.1f0), 0.01f0, Float32[1, 0]),
+        ExplicitEuler())
+    sol64 = integrate(ODEProblem(oscillator!, (0.0, 0.1), 0.01, [1e40, 0.0]), ExplicitEuler())
+    @test eltype(sol32.q[1]) === Float32
+    sols = RCM.GeometricSolution[sol32, sol64]
+
+    Z = GeometricIntegratorEnsembleData(sols, Independent()).snapshot
+    @test eltype(Z) === Float64
+    @test Z[1, 1, 2] == 1e40
+    @test Z[:, :, 1] == RCM.snapshot_matrix(sol32.q)
+    @test Z[:, :, 2] == RCM.snapshot_matrix(sol64.q)
+
+    Z = GeometricIntegratorEnsembleData(sols, Dependent()).snapshot
+    @test eltype(Z) === Float64
+    @test Z[1, length(sol32.q) + 1] == 1e40
+    @test Z == hcat(RCM.snapshot_matrix(sol32.q), RCM.snapshot_matrix(sol64.q))
 end
 
 @testset "Dependent: the snapshot matrices side by side" begin
