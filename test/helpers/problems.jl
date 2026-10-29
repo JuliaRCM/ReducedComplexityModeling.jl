@@ -1,6 +1,6 @@
 using GeometricIntegrators
 
-function lorenz_problem()
+function lorenz_problem(; tspan = (0.0, 100.0))
     function lorenz(du, t, u, p)
         du[1] = 10.0(u[2]-u[1])
         du[2] = u[1]*(28.0-u[3]) - u[2]
@@ -8,7 +8,6 @@ function lorenz_problem()
     end
     u0 = [1.0, 0.0, 0.0]
     tstep = 0.01
-    tspan = (0.0, 100.0)
     prob = ODEProblem(lorenz, tspan, tstep, u0)
     sol = integrate(prob, ExplicitEuler())
     prob, sol

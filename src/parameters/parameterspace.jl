@@ -68,7 +68,15 @@ function ParameterSpace(fpath::AbstractString, path::AbstractString = "/")
 end
 
 """
-save ParameterSpace
+    h5save(h5::H5DataStore, ps::ParameterSpace; path = "/")
+    h5save(h5::H5DataStore, param::Parameter; path = string(param.name))
+    h5save(fpath::AbstractString, data, args...; mode = "w", kwargs...)
+
+Write `ps` or `param` to the group `path` of `h5`. A [`ParameterSpace`](@ref) writes one dataset
+per parameter to the subgroup `samples`, and each of its parameters to the subgroup `parameters`.
+A [`Parameter`](@ref) writes the datasets `minimum`, `maximum` and, if it has samples, `samples`.
+With a file path, open the file `fpath` in `mode` and write `data` to it. [`h5load`](@ref) reads
+the data back.
 """
 function h5save(h5::H5DataStore, ps::ParameterSpace; path::AbstractString = "/")
     cols = columns(ps.samples)
@@ -85,7 +93,13 @@ function h5save(h5::H5DataStore, ps::ParameterSpace; path::AbstractString = "/")
 end
 
 """
-Load ParameterSpace
+    h5load(ParameterSpace, h5::H5DataStore; path = "/")
+    h5load(Parameter, h5::H5DataStore; path = "/")
+    h5load(T::Type, fpath::AbstractString, args...; mode = "r", kwargs...)
+
+Read a [`ParameterSpace`](@ref) or a [`Parameter`](@ref) from the group `path` of `h5`, in the
+layout that [`h5save`](@ref) writes. A parameter takes the name of its group. With a file path,
+open the file `fpath` in `mode` and read a `T` from it.
 """
 function h5load(::Type{ParameterSpace}, h5::H5DataStore; path::AbstractString = "/")
     ParameterSpace(h5, path)

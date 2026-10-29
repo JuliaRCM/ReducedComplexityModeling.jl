@@ -22,18 +22,43 @@ holds the changes since the last release until that release is cut.
 
 ### Bug Fixes
 
-- `Parameter("μ", minimum, maximum, n)`, with a string name and a sample count, returns a
-  `Parameter` with `n` samples. It threw a `MethodError` before, because two methods matched it
-  equally well. This was the method ambiguity of issue #38, so Aqua's ambiguity check runs and
-  passes in the test suite.
+- `Parameter` takes a `Symbol` or a string name in every constructor form. The call
+  `Parameter("μ", minimum, maximum, n)` returns a `Parameter` whose samples are those of
+  `LinRange(minimum, maximum, n)`, without duplicates, so equal bounds give one sample. It threw a
+  `MethodError` before, because two methods matched it equally well. This relates to issue #38: the
+  two string-name methods that clashed are deleted, and `detect_ambiguities(ReducedComplexityModeling)`
+  reports no ambiguity. A gap remains: integer bounds with a sample count still throw a
+  `MethodError`, because the `LinRange` of integers has a float element type, so
+  `Parameter(:a, 0, 10, 5)` throws.
 
-### Changed
+- `GeometricIntegratorEnsembleData(solutions, Independent())` builds its snapshot (K16). It threw
+  an `ErrorException` before. The snapshot is an array of size `ny × nx × ns`, for `ns` solutions
+  with `nx` entries of a state `q` with `ny` components. Its slice `[:, :, i]` is the snapshot
+  matrix of solution `i`, in the layout of `GeometricIntegratorData`. Solutions with different
+  numbers of entries in `q` throw an `ArgumentError`.
 
-- The module and every exported name have a docstring with text: `Parameter`, `ParameterSampler`
-  and `CartesianParameterSampler` replace their empty docstrings, and `POD`, `reduce!`, `compose`,
-  `project`, `hassamples`, `GeometricIntegratorData`, `GeometricIntegratorEnsembleData`,
-  `Dependent` and `Independent` gain one. The docstring of `Independent` states that its layout
-  throws an `ErrorException` (KNOWN_ISSUES K16).
+- `GeometricIntegratorEnsembleData(solutions, Dependent())` sizes its snapshot from the total number
+  of entries of all solutions. It was sized from the first solution alone: a later solution with
+  fewer entries left zero-filled trailing columns, and one with more entries threw a `BoundsError`.
+  The solutions may now have different numbers of entries in `q`.
+
+- `GeometricIntegratorEnsembleData` and both `Base.Array(solutions, ::Dependent)` and
+  `Base.Array(solutions, ::Independent)` take a vector with a concrete element type, such as
+  `[sol, sol]`. `GeometricIntegratorEnsembleData([sol, sol], Dependent())` threw a `MethodError`
+  before.
+
+- `reduce!(model, k, CotangentLiftEVD())` (K17) and `reduce!(model, k, ComplexSVD())` (K18) no
+  longer throw on every call. Each stores a `2n × 2k` basis in `model.reduced_basis`, orthonormal
+  and symplectic (`AᵀJA = J`). Neither algorithm type is exported: a caller reaches them as
+  `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
+
+- Help text: the module and every exported name have a docstring with text. `Parameter`,
+  `ParameterSampler` and `CartesianParameterSampler` replace their empty docstrings, and `POD`,
+  `reduce!`, `compose`, `project`, `hassamples`, `GeometricIntegratorData`,
+  `GeometricIntegratorEnsembleData`, `Dependent` and `Independent` gain one. The exports test
+  requires the docstring of every exported or public name to contain that name. The docstrings of
+  `h5save` and `h5load` name their three methods and their arguments (K21), and the docstring of
+  `ReducedBasisModel` no longer names packages that are not dependencies of this package.
 
 ## [0.4.1] — 2026-10-29
 

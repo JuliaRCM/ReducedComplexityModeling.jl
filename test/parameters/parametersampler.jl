@@ -84,7 +84,7 @@ end
 end
 
 @testset "h5save and h5load of a randomly sampled ParameterSpace" begin
-    h5file = "temp.h5"
+    h5file = joinpath(mktempdir(), "temp.h5")
     ps = ParameterSpace(RandomParameterSampler(4, Xoshiro(1)),
         Parameter(:μ, 0.0, 1.0), Parameter(:ν, 0.0, 2.0))
 

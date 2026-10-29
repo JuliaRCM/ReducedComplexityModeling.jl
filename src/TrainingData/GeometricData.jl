@@ -41,7 +41,8 @@ abstract type AbstractDependence end
 
 The layout of the snapshot of a [`GeometricIntegratorEnsembleData`](@ref) in which the solutions
 form one snapshot matrix: one row per component of the state `q`, and the entries of `q` of the
-first solution, then those of the second, and so on, as its columns.
+first solution, then those of the second, and so on, as its columns. The solutions may have
+different numbers of entries in `q`.
 """
 struct Dependent <: AbstractDependence end
 
@@ -49,17 +50,18 @@ struct Dependent <: AbstractDependence end
     Independent()
 
 The layout of the snapshot of a [`GeometricIntegratorEnsembleData`](@ref) in which each solution
-keeps its own snapshot, along a third dimension. This layout is not implemented:
-`GeometricIntegratorEnsembleData(solutions, Independent())` throws an `ErrorException`, because
-the snapshot array has three dimensions and `adjoint` is not defined for it.
+keeps its own snapshot, along a third dimension: an array of size `ny × nx × ns`, for `ns`
+solutions with `nx` entries of a state `q` with `ny` components. Its slice `[:, :, i]` is the
+snapshot matrix of solution `i`, in the layout of [`GeometricIntegratorData`](@ref). All
+solutions must have the same number of entries in `q`; otherwise the constructor throws an
+`ArgumentError`.
 """
 struct Independent <: AbstractDependence end
 
-function Base.Array(solutions::Vector{GeometricSolution}, ::Dependent)
-    ns = length(solutions)
-    nx = length(solutions[1].q)
+function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Dependent)
+    nx = sum(solution -> length(solution.q), solutions)
     ny = length(solutions[1].q[1])
-    Z = zeros(eltype(solutions[1].q[1]), ns*nx, ny)
+    Z = zeros(eltype(solutions[1].q[1]), nx, ny)
 
     i = 1
     for solution in solutions
@@ -71,10 +73,12 @@ function Base.Array(solutions::Vector{GeometricSolution}, ::Dependent)
     Array(Z')
 end
 
-function Base.Array(solutions::Vector{GeometricSolution}, ::Independent)
+function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Independent)
     ns = length(solutions)
     nx = length(solutions[1].q)
     ny = length(solutions[1].q[1])
+    all(solution -> length(solution.q) == nx, solutions) ||
+        throw(ArgumentError("the Independent layout needs solutions with equal numbers of entries"))
     Z = zeros(eltype(solutions[1].q[1]), nx, ny, ns)
 
     for (i, solution) in enumerate(solutions)
@@ -82,21 +86,21 @@ function Base.Array(solutions::Vector{GeometricSolution}, ::Independent)
             Z[j, :, i] .= elem
         end
     end
-    Array(Z')
+    permutedims(Z, (2, 1, 3))
 end
 
 """
-    GeometricIntegratorEnsembleData(solutions::Vector{GeometricSolution}, deps)
+    GeometricIntegratorEnsembleData(solutions::AbstractVector{<:GeometricSolution}, deps)
 
 The solutions of an ensemble of geometric integrations and their snapshot, in the layout that
-`deps` selects: [`Dependent`](@ref) or [`Independent`](@ref). The element type of `solutions` is
-`GeometricSolution` itself; a vector with a concrete element type throws a `MethodError`.
+`deps` selects: [`Dependent`](@ref) or [`Independent`](@ref).
 """
 struct GeometricIntegratorEnsembleData
     solutions::Vector{GeometricSolution}
     snapshot::Array
 
-    function GeometricIntegratorEnsembleData(solutions::Vector{GeometricSolution}, deps::AbstractDependence)
+    function GeometricIntegratorEnsembleData(
+            solutions::AbstractVector{<:GeometricSolution}, deps::AbstractDependence)
         new(solutions, Array(solutions, deps))
     end
 

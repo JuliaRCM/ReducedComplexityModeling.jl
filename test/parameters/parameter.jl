@@ -2,7 +2,7 @@ using ReducedComplexityModeling
 using Test
 
 samples = [0.0, 1.0, 2.0, 3.0, 4.0]
-h5file = "temp.h5"
+h5file = joinpath(mktempdir(), "temp.h5")
 
 @testset "Parameter" begin
     @test_throws AssertionError Parameter(:μ, 1.0, 4.0, samples)
@@ -93,6 +93,43 @@ end
         p = Parameter(:mu, a, b, 3)
         @test eltype(collect(p)) === T
         @test all(a .≤ collect(p) .≤ b)
+    end
+end
+
+@testset "Every form takes a Symbol or a string name" begin
+    for name in (:mu, "mu")
+        p = Parameter(name, 0.0f0, 1.0f0, 5)
+        @test p isa Parameter{Float32, Vector{Float32}}
+        @test p.name === :mu
+        @test collect(p) == Float32[0, 1 // 4, 1 // 2, 3 // 4, 1]
+
+        p = Parameter(name, 0.0, 1.0, 3)
+        @test p isa Parameter{Float64, Vector{Float64}}
+        @test p.name === :mu
+        @test collect(p) == [0.0, 0.5, 1.0]
+
+        p = Parameter(name, 0.0, 1.0)
+        @test p isa Parameter{Float64, Nothing}
+        @test p.name === :mu
+
+        p = Parameter(name, [0.0, 1.0])
+        @test p isa Parameter{Float64, Vector{Float64}}
+        @test p.name === :mu
+        @test (minimum(p), maximum(p), collect(p)) == (0.0, 1.0, [0.0, 1.0])
+
+        p = Parameter(name, 0.0, 1.0, [0.5])
+        @test p isa Parameter{Float64, Vector{Float64}}
+        @test p.name === :mu
+        @test collect(p) == [0.5]
+    end
+    @test_throws MethodError Parameter(:a, 0, 10, 5)
+end
+
+@testset "A count gives the samples of LinRange without duplicates" begin
+    for name in (:μ, "μ")
+        @test collect(Parameter(name, 1.0, 1.0, 5)) == [1.0]
+        @test length(Parameter(name, 1.0, 1.0, 5)) == 1
+        @test_throws MethodError Parameter(name, 0, 1, 3)
     end
 end
 

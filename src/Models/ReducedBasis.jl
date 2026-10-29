@@ -10,11 +10,11 @@ struct CotangentLiftEVD end
 struct ComplexSVD end
 
 """
-Reduced Basis
+    ReducedBasisModel(alg, snapshot)
 
-Uses ModelOrderReduction methods from ReducedBasisMethods.jl
-to represent the data in latent space.
-
+A reduced-basis model of the snapshot matrix `snapshot`, whose columns are the snapshots, with
+the reduction scheme `alg`, such as [`POD`](@ref). [`reduce!`](@ref) computes the reduced basis
+and stores it in the field `reduced_basis`, which is undefined until then.
 """
 mutable struct ReducedBasisModel <: AbstractModel
     reduction_scheme::Any
@@ -28,10 +28,16 @@ end
 
 """
     reduce!(model::ReducedBasisModel, k::Int, ::POD)
+    reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftEVD)
+    reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
 
-Compute a reduced basis of dimension `k` from the snapshot matrix of `model`, whose columns are
-the snapshots, store it in `model.reduced_basis` and return it. With [`POD`](@ref), the basis is
-the matrix of the first `k` left singular vectors of the snapshot matrix.
+Compute a reduced basis from the snapshot matrix of `model`, whose columns are the snapshots,
+store it in `model.reduced_basis` and return it. With [`POD`](@ref), the basis is the matrix of
+the first `k` left singular vectors of the snapshot matrix. With `CotangentLiftEVD()` and
+`ComplexSVD()`, which the package does not export, the snapshot has `2n` rows, `q` above `p`, and
+the basis is an orthonormal and symplectic `2n × 2k` matrix: the cotangent lift of the first `k`
+left singular vectors of `[q p]`, or the real form of the first `k` left singular vectors of
+`q + im * p`.
 """
 function reduce!(model::ReducedBasisModel, k::Int, ::POD)
     U, _, _ = svd(model.snapshot)
@@ -44,7 +50,7 @@ function reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftEVD)
     n = floor(Int, size(snapshot, 1)/2)
     q, p = snapshot[1:n, :], snapshot[(n + 1):end, :]
     cotangent_snap = hcat(q, p)
-    U, _, _ = svd(cotangent_snap)[:, 1:k]
+    U = svd(cotangent_snap).U[:, 1:k]
     reduced_basis = zeros(2*n, 2*k)
     reduced_basis[1:n, 1:k] = U
     reduced_basis[(n + 1):(2 * n), (k + 1):(2 * k)] = U
@@ -70,13 +76,13 @@ function reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
     n = floor(Int, size(snapshot, 1)/2)
     q, p = snapshot[1:n, :], snapshot[(n + 1):end, :]
     csvd_snap = q + 1im * p
-    U, _, _ = svd(csvd_snap)
-    ϕ, Ψ = real.(U), imag.(U)
+    U = svd(csvd_snap).U[:, 1:k]
+    Φ, Ψ = real.(U), imag.(U)
     reduced_basis = zeros(2*n, 2*k)
     reduced_basis[1:n, 1:k] = Φ
     reduced_basis[1:n, (k + 1):(2 * k)] = -Ψ
     reduced_basis[(n + 1):(2 * n), 1:k] = Ψ
-    reduced_basis[((n + 1):(2 * n):(k + 1)):(2 * k)] = Φ
+    reduced_basis[(n + 1):(2 * n), (k + 1):(2 * k)] = Φ
     model.reduced_basis = reduced_basis
 end
 
