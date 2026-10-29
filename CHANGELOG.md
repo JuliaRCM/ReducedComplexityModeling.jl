@@ -12,6 +12,29 @@ tags. It is named as a gap rather than reconstructed, because a changelog assemb
 fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
 holds the changes since the last release until that release is cut.
 
+## [Unreleased]
+
+### Breaking Changes
+
+- `ReducedComplexityModeling` no longer exports `Array`. The binding is `Core`'s, and every module
+  sees it without the export, so `Array` keeps its meaning in a caller's code; what changes is the
+  export list that `names(ReducedComplexityModeling)` returns.
+
+### Bug Fixes
+
+- `Parameter("μ", minimum, maximum, n)`, with a string name and a sample count, returns a
+  `Parameter` with `n` samples. It threw a `MethodError` before, because two methods matched it
+  equally well. This was the method ambiguity of issue #38, so Aqua's ambiguity check runs and
+  passes in the test suite.
+
+### Changed
+
+- The module and every exported name have a docstring with text: `Parameter`, `ParameterSampler`
+  and `CartesianParameterSampler` replace their empty docstrings, and `POD`, `reduce!`, `compose`,
+  `project`, `hassamples`, `GeometricIntegratorData`, `GeometricIntegratorEnsembleData`,
+  `Dependent` and `Independent` gain one. The docstring of `Independent` states that its layout
+  throws an `ErrorException` (KNOWN_ISSUES K16).
+
 ## [0.4.1] — 2026-10-29
 
 ### Changed

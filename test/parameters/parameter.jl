@@ -76,6 +76,26 @@ h5file = "temp.h5"
     @test p1 == p2
 end
 
+@testset "Parameter keeps the element type of its bounds ($T)" for T in (Float32, Float64)
+    for name in (:mu, "mu")
+        p = Parameter(name, zero(T), one(T), 5)
+        @test p.name === :mu
+        @test minimum(p) isa T
+        @test maximum(p) isa T
+        @test eltype(collect(p)) === T
+        @test collect(p) == T[0, 1 // 4, 1 // 2, 3 // 4, 1]
+    end
+
+    # bounds across the range of `T`; each gives `T` samples between the bounds
+    for (a, b) in ((-zero(T), nextfloat(zero(T))), (floatmin(T), eps(T)),
+        (-floatmax(T) / 2, floatmax(T) / 2), (-one(T), floatmax(T)),
+        ((T(10)^k .* (-one(T), one(T)) for k in -8:4:8)...))
+        p = Parameter(:mu, a, b, 3)
+        @test eltype(collect(p)) === T
+        @test all(a .≤ collect(p) .≤ b)
+    end
+end
+
 @testset "Parameter show" begin
     p = Parameter(:μ, 0.0, 1.0, 3)
     @test sprint(show, MIME"text/plain"(), p) ==

@@ -67,7 +67,7 @@
 
 ### K13 · Explicit import checks report implicit and non-public dependency accesses
 
-- **Location:** `src/ReducedComplexityModeling.jl:4`, the dependency imports, and their uses in
+- **Location:** `src/ReducedComplexityModeling.jl:13`, the dependency imports, and their uses in
   included source files.
 - **Evidence:** on Julia 1.13.3, ExplicitImports 1.15.0,
   `print_explicit_imports(ReducedComplexityModeling; report_non_public = true)` reports 25
@@ -75,7 +75,7 @@
   `ArrayOrNamedTuple`, `H5DataStore`, `NamedTupleOfArrays`), and 8 non-public qualified accesses.
   `test_explicit_imports(ReducedComplexityModeling)` fails the implicit-import, public-import and
   public-qualified-access checks. `ArrayOrNamedTuple` and `NamedTupleOfArrays` are imported at
-  `src/ReducedComplexityModeling.jl:26`, for the data loader's dispatch; the other import
+  `src/ReducedComplexityModeling.jl:35`, for the data loader's dispatch; the other import
   statements are present at merge base `3b0554e`. The `Chain` and `NeuralNetwork` imports have no
   diagnostic.
 - **Kind:** defect
@@ -111,3 +111,50 @@
   third element is a fallback that no build reads.
 - **Kind:** defect
 - **Found:** 2026-10-28 (critic round 1b)
+
+### K16 · `GeometricIntegratorEnsembleData(solutions, Independent())` throws
+
+- **Location:** `src/TrainingData/GeometricData.jl`, `Base.Array(solutions, ::Independent)`, which
+  ends in `Array(Z')` on the three-dimensional array `Z`.
+- **Evidence:** with `sol` the Lorenz solution of `test/helpers/problems.jl`,
+  `GeometricIntegratorEnsembleData(GeometricSolution[sol, sol], Independent())` throws
+  `ErrorException: adjoint not defined for Array{Float64, 3}`; the same call with `Dependent()`
+  returns a `3 × 20002` snapshot. No test constructs the `Independent` layout.
+- **Kind:** defect
+- **Found:** 2026-10-29
+
+### K17 · `reduce!` with `CotangentLiftEVD` throws on every call
+
+- **Location:** `src/Models/ReducedBasis.jl`, `reduce!(model, k, ::CotangentLiftEVD)`, the line
+  `U, _, _ = svd(cotangent_snap)[:, 1:k]`.
+- **Evidence:** `reduce!(ReducedBasisModel(alg, randn(6, 10)), 2, alg)` with
+  `alg = ReducedComplexityModeling.CotangentLiftEVD()` throws `MethodError: no method matching
+  getindex(::LinearAlgebra.SVD{…}, ::Colon, ::UnitRange{Int64})`. No test calls the method, and
+  the mutant that makes its body `error("mutant")` passes `integration/pod_lorenz.jl` and
+  `TrainingProblem.jl`.
+- **Kind:** defect
+- **Found:** 2026-10-29
+
+### K18 · `reduce!` with `ComplexSVD` throws on every call
+
+- **Location:** `src/Models/ReducedBasis.jl`, `reduce!(model, k, ::ComplexSVD)`, which assigns
+  `ϕ, Ψ = real.(U), imag.(U)` and then reads `Φ`.
+- **Evidence:** `reduce!(ReducedBasisModel(alg, randn(6, 10)), 2, alg)` with
+  `alg = ReducedComplexityModeling.ComplexSVD()` throws `UndefVarError: Φ not defined in
+  ReducedComplexityModeling`. No test calls the method, and the mutant that makes its body
+  `error("mutant")` passes `integration/pod_lorenz.jl` and `TrainingProblem.jl`.
+- **Kind:** defect
+- **Found:** 2026-10-29
+
+### K19 · The parameter tests write `temp.h5` in the working directory
+
+- **Location:** `test/parameters/parameter.jl`, `h5file = "temp.h5"`, and
+  `test/parameters/parametersampler.jl`, the testset `h5save and h5load of a randomly sampled
+  ParameterSpace`.
+- **Evidence:** in a `mutate.jl --warm … --jobs 4` run of four mutants started at once, two logs
+  show `Parameter: Error During Test` with `unable to determine if temp.h5 is accessible in the
+  HDF5 format (file may not exist)` and then `read_parameters from a file path: Test Failed` at
+  `@test !isfile(h5file)`: the processes share one working directory, so one test removes or
+  finds the file of another. A test run in one process does not show it.
+- **Kind:** defect
+- **Found:** 2026-10-29

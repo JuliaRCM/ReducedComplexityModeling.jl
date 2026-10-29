@@ -7,7 +7,21 @@ _sort(s::Nothing) = s
 _sort(s::AbstractVector) = sort(unique(collect(s)))
 
 """
+    Parameter(name, minimum, maximum)
+    Parameter(name, minimum, maximum, samples)
+    Parameter(name, minimum, maximum, n::Int)
+    Parameter(name, samples::AbstractVector)
 
+A named parameter of a system: the bounds `minimum ≤ maximum` and, optionally, a vector of
+samples between them. `name` is a `Symbol` or a string, which is converted to a `Symbol`.
+
+The bounds have one type `DT`, and the samples have element type `DT`. The samples are stored
+sorted and without duplicates. Without samples, `samples` is `nothing`. With a count `n`, the
+samples are the `n` points of `LinRange(minimum, maximum, n)`; their element type is that of the
+bounds only for floating-point bounds, so integer bounds with a count throw a `MethodError`. With
+only a vector of samples, the bounds are its smallest and largest entry.
+
+`minimum > maximum`, or a sample outside `[minimum, maximum]`, throws an `AssertionError`.
 """
 struct Parameter{DT <: Number, ST <: AbstractSample{DT}}
     name::Symbol
@@ -35,6 +49,11 @@ function Parameter(name, minimum::DT, maximum::DT) where {DT}
 end
 function Parameter(name, minimum::DT, maximum::DT, n::Int) where {DT}
     Parameter(name, minimum, maximum, LinRange(minimum, maximum, n))
+end
+# A string name with a sample count matches the string-name method and the sample-count method
+# above equally well; this method decides between them.
+function Parameter(name::AbstractString, minimum::DT, maximum::DT, n::Int) where {DT}
+    Parameter(Symbol(name), minimum, maximum, n)
 end
 function Parameter(name, samples::AbstractVector)
     Parameter(name, minimum(samples), maximum(samples), samples)
@@ -73,6 +92,11 @@ Base.length(p::ParameterWithoutSamples) = 0
 Base.size(p::ParameterWithSamples) = size(p.samples)
 Base.size(p::ParameterWithoutSamples) = (0,)
 
+"""
+    hassamples(p::Parameter)
+
+Whether the parameter `p` has a non-empty vector of samples.
+"""
 hassamples(p::ParameterWithSamples) = length(p.samples) > 0
 hassamples(p::ParameterWithoutSamples) = false
 

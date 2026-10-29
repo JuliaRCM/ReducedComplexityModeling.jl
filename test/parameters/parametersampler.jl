@@ -69,6 +69,20 @@ end
     @test_throws AssertionError sample(CartesianParameterSampler(), (a = params.μ,))
 end
 
+@testset "Each sampler keeps the element type of the parameters ($T)" for T in (Float32, Float64)
+    μ = Parameter(:μ, zero(T), one(T), 3)
+    ν = Parameter(:ν, -one(T), T(2), 2)
+
+    @testset "$(nameof(typeof(sampler)))" for sampler in (CartesianParameterSampler(),
+        RandomParameterSampler(5, Xoshiro(1)), QuasiRandomParameterSampler(5))
+        s = sample(sampler, μ, ν)
+        @test eltype(s.μ) === T
+        @test eltype(s.ν) === T
+        @test all(minimum(μ) .≤ s.μ .≤ maximum(μ))
+        @test all(minimum(ν) .≤ s.ν .≤ maximum(ν))
+    end
+end
+
 @testset "h5save and h5load of a randomly sampled ParameterSpace" begin
     h5file = "temp.h5"
     ps = ParameterSpace(RandomParameterSampler(4, Xoshiro(1)),

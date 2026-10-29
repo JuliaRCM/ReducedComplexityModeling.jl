@@ -11,6 +11,13 @@ function snapshot_matrix(sol::DataSeries)
     Array(Z')
 end
 
+"""
+    GeometricIntegratorData(solution::GeometricSolution)
+
+The solution of a geometric integrator and its snapshot matrix: the field `snapshot` is a matrix
+with one row per component of the state `q` and one column per entry of `solution.q`, the
+initial state included.
+"""
 struct GeometricIntegratorData
     solution::GeometricSolution
     snapshot::Matrix
@@ -29,8 +36,23 @@ end
 
 abstract type AbstractDependence end
 
+"""
+    Dependent()
+
+The layout of the snapshot of a [`GeometricIntegratorEnsembleData`](@ref) in which the solutions
+form one snapshot matrix: one row per component of the state `q`, and the entries of `q` of the
+first solution, then those of the second, and so on, as its columns.
+"""
 struct Dependent <: AbstractDependence end
 
+"""
+    Independent()
+
+The layout of the snapshot of a [`GeometricIntegratorEnsembleData`](@ref) in which each solution
+keeps its own snapshot, along a third dimension. This layout is not implemented:
+`GeometricIntegratorEnsembleData(solutions, Independent())` throws an `ErrorException`, because
+the snapshot array has three dimensions and `adjoint` is not defined for it.
+"""
 struct Independent <: AbstractDependence end
 
 function Base.Array(solutions::Vector{GeometricSolution}, ::Dependent)
@@ -63,6 +85,13 @@ function Base.Array(solutions::Vector{GeometricSolution}, ::Independent)
     Array(Z')
 end
 
+"""
+    GeometricIntegratorEnsembleData(solutions::Vector{GeometricSolution}, deps)
+
+The solutions of an ensemble of geometric integrations and their snapshot, in the layout that
+`deps` selects: [`Dependent`](@ref) or [`Independent`](@ref). The element type of `solutions` is
+`GeometricSolution` itself; a vector with a concrete element type throws a `MethodError`.
+"""
 struct GeometricIntegratorEnsembleData
     solutions::Vector{GeometricSolution}
     snapshot::Array

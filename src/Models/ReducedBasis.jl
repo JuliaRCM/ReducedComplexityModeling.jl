@@ -1,3 +1,9 @@
+"""
+    POD()
+
+Proper orthogonal decomposition: `reduce!(model, k, POD())` takes the first `k` left singular
+vectors of the snapshot matrix as the reduced basis.
+"""
 struct POD end
 struct CotangentLiftSVD end
 struct CotangentLiftEVD end
@@ -20,6 +26,13 @@ mutable struct ReducedBasisModel <: AbstractModel
     end
 end
 
+"""
+    reduce!(model::ReducedBasisModel, k::Int, ::POD)
+
+Compute a reduced basis of dimension `k` from the snapshot matrix of `model`, whose columns are
+the snapshots, store it in `model.reduced_basis` and return it. With [`POD`](@ref), the basis is
+the matrix of the first `k` left singular vectors of the snapshot matrix.
+"""
 function reduce!(model::ReducedBasisModel, k::Int, ::POD)
     U, _, _ = svd(model.snapshot)
     model.reduced_basis = U[:, 1:k]
@@ -67,6 +80,14 @@ function reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
     model.reduced_basis = reduced_basis
 end
 
+"""
+    compose(prob::ODEProblem, model::ReducedBasisModel)
+
+The reduced problem of `prob` in the reduced basis `R = model.reduced_basis`: an `ODEProblem` in
+the reduced coordinates `u`, with the vector field `R' * v(R * u)`, where `v` is the vector field
+of `prob`, and the initial condition `R' * q₀`. The time span, the time step and the parameters
+are those of `prob`. Call [`reduce!`](@ref) on `model` first.
+"""
 function compose(prob::ODEProblem, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
 
@@ -84,6 +105,13 @@ function compose(prob::ODEProblem, model::ReducedBasisModel)
     red_prob
 end
 
+"""
+    project(rsol::GeometricSolution, model::ReducedBasisModel)
+
+Map the solution `rsol` of a reduced problem (see [`compose`](@ref)) back to the full space. The
+result is the matrix `model.reduced_basis * Q`, where the columns of `Q` are the entries of
+`rsol.q`; its columns are the states in the full space.
+"""
 function project(rsol::GeometricSolution, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
     Rᵦ * snapshot_matrix(rsol.q)

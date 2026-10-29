@@ -1,5 +1,9 @@
 """
+    ParameterSampler
 
+The supertype of the samplers that [`sample`](@ref) draws the points of a parameter space with:
+[`CartesianParameterSampler`](@ref), [`RandomParameterSampler`](@ref) and
+[`QuasiRandomParameterSampler`](@ref).
 """
 abstract type ParameterSampler end
 
@@ -25,7 +29,12 @@ function sample(ps::ParameterSampler, parameters::Vararg{Parameter})
 end
 
 """
+    CartesianParameterSampler()
 
+Draws every combination of the samples stored in the parameters: the Cartesian product of their
+sample vectors, with the first parameter varying fastest. Each parameter must have samples
+(see [`hassamples`](@ref)); a parameter without them throws an `AssertionError`. The samples keep
+the element type of each parameter.
 """
 struct CartesianParameterSampler <: ParameterSampler end
 
