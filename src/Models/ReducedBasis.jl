@@ -43,7 +43,8 @@ left singular vectors of `[q p]`: the first takes them from the singular value d
 squares the condition number: in the floating-point type `T` of the basis, `CotangentLiftEVD()`
 resolves only the singular vectors whose singular values exceed about `sqrt(eps(T))` times the
 largest, and its eigendecomposition of an `n × n` matrix takes `O(n³)` time and `O(n²)` memory.
-`ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. Where
+For a complex snapshot, the two cotangent lifts give `A' * A = I` and `A' * J * A = J`, with the
+canonical symplectic matrix `J`, and not `transpose(A) * J * A = J`. `ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. Where
 `k` exceeds the number of singular vectors, the basis is completed with orthonormal vectors. The
 basis has the floating-point type of the snapshot's element type: `Float64` for an integer
 snapshot.
