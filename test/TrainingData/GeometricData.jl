@@ -1,4 +1,5 @@
 using GeometricIntegrators
+using OffsetArrays: OffsetVector
 using ReducedComplexityModeling
 using Test
 
@@ -53,6 +54,12 @@ end
     @test Z == hcat(RCM.snapshot_matrix(sol32.q), RCM.snapshot_matrix(sol64.q))
 end
 
+@testset "The snapshot of one solution has its element type" begin
+    sol32 = integrate(ODEProblem(oscillator!, (0.0f0, 0.1f0), 0.01f0, Float32[1, 0]),
+        ExplicitEuler())
+    @test eltype(GeometricIntegratorData(sol32).snapshot) === Float32
+end
+
 @testset "Dependent: the snapshot matrices side by side" begin
     for sols in ((sol1, sol2), (sol1, sol3), (sol3, sol1))
         Z = GeometricIntegratorEnsembleData(RCM.GeometricSolution[sols...], Dependent()).snapshot
@@ -68,6 +75,44 @@ end
         RCM.GeometricSolution[sol1, sol1d], Dependent())
     @test_throws ArgumentError GeometricIntegratorEnsembleData(
         RCM.GeometricSolution[sol1d, sol1], Dependent())
+end
+
+@testset "An offset-indexed vector of solutions" begin
+    sols = OffsetVector([sol1, sol2], 0:1)
+    for deps in (Dependent(), Independent())
+        data = GeometricIntegratorEnsembleData(sols, deps)
+        @test data.snapshot ==
+              GeometricIntegratorEnsembleData(RCM.GeometricSolution[sol1, sol2], deps).snapshot
+        @test data.solutions == [sol1, sol2]
+    end
+end
+
+@testset "A solution with only its initial entry" begin
+    # a step larger than the number of time steps stores the initial state alone
+    prob = ODEProblem(oscillator!, (0.0, 0.1), 0.01, [1.0, 0.0])
+    sol0 = RCM.GeometricSolution(prob, 1000)
+    @test length(sol0.q) == 1
+
+    @test RCM.snapshot_matrix(sol0.q) == reshape([1.0, 0.0], 2, 1)
+    @test GeometricIntegratorData(sol0).snapshot == reshape([1.0, 0.0], 2, 1)
+    sols = RCM.GeometricSolution[sol0, sol0]
+    @test GeometricIntegratorEnsembleData(sols, Dependent()).snapshot == [1.0 1.0; 0.0 0.0]
+    @test GeometricIntegratorEnsembleData(sols, Independent()).snapshot ==
+          reshape([1.0, 0.0, 1.0, 0.0], 2, 1, 2)
+end
+
+@testset "The fields of the data types are concretely typed" begin
+    data = GeometricIntegratorData(sol1)
+    @test isconcretetype(typeof(data))
+    @test all(isconcretetype, fieldtypes(typeof(data)))
+    @test typeof(data.snapshot) === Matrix{Float64}
+
+    for (deps, N) in ((Dependent(), 2), (Independent(), 3))
+        ens = GeometricIntegratorEnsembleData([sol1, sol2], deps)
+        @test isconcretetype(typeof(ens))
+        @test all(isconcretetype, fieldtypes(typeof(ens)))
+        @test typeof(ens.snapshot) === Array{Float64, N}
+    end
 end
 
 @testset "A vector with a concrete element type" begin

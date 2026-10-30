@@ -38,3 +38,6 @@ Presentations/*.png
 Presentations/*.pdf
 runs/*.h5
 runs/*.pdf
+
+# Output of the scripts
+/results

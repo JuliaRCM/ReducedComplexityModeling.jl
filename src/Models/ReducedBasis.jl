@@ -16,73 +16,100 @@ A reduced-basis model of the snapshot matrix `snapshot`, whose columns are the s
 the reduction scheme `alg`, such as [`POD`](@ref). [`reduce!`](@ref) computes the reduced basis
 and stores it in the field `reduced_basis`, which is undefined until then.
 """
-mutable struct ReducedBasisModel <: AbstractModel
-    reduction_scheme::Any
-    snapshot::Any
-    reduced_basis::Any
+mutable struct ReducedBasisModel{AT, T, ST <: AbstractMatrix} <: AbstractModel
+    reduction_scheme::AT
+    snapshot::ST
+    reduced_basis::Matrix{T}
 
-    function ReducedBasisModel(alg, snaps)
-        new(alg, snaps)
+    function ReducedBasisModel(alg::AT, snaps::ST) where {AT, ST <: AbstractMatrix}
+        new{AT, float(eltype(ST)), ST}(alg, snaps)
     end
 end
 
 """
     reduce!(model::ReducedBasisModel, k::Int, ::POD)
+    reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftSVD)
     reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftEVD)
     reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
 
 Compute a reduced basis from the snapshot matrix of `model`, whose columns are the snapshots,
 store it in `model.reduced_basis` and return it. With [`POD`](@ref), the basis is the matrix of
-the first `k` left singular vectors of the snapshot matrix. With `CotangentLiftEVD()` and
-`ComplexSVD()`, which the package does not export, the snapshot has `2n` rows, `q` above `p`, and
-the basis is an orthonormal and symplectic `2n × 2k` matrix: the cotangent lift of the first `k`
-left singular vectors of `[q p]`, or the real form of the first `k` left singular vectors of
-`q + im * p`.
+the first `k` left singular vectors of the snapshot matrix. With `CotangentLiftSVD()`,
+`CotangentLiftEVD()` and `ComplexSVD()`, which the package does not export, the snapshot has `2n`
+rows, `q` above `p`, and the basis is an orthonormal and symplectic `2n × 2k` matrix, for
+`k ≤ n`. `CotangentLiftSVD()` and `CotangentLiftEVD()` give the cotangent lift of the first `k`
+left singular vectors of `[q p]`: the first takes them from the singular value decomposition of
+`[q p]`, the second from the eigendecomposition of the Gram matrix `q qᵀ + p pᵀ`. The Gram matrix
+squares the condition number: in the floating-point type `T` of the basis, `CotangentLiftEVD()`
+resolves only the singular vectors whose singular values exceed about `sqrt(eps(T))` times the
+largest, and its eigendecomposition of an `n × n` matrix takes `O(n³)` time and `O(n²)` memory.
+`ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. The
+three algorithms take a real snapshot: a complex one throws a `MethodError`. Where `k` exceeds
+the number of singular vectors, the basis is completed with orthonormal vectors. The basis has
+the floating-point type of the snapshot's element type: `Float64` for an integer snapshot.
 """
 function reduce!(model::ReducedBasisModel, k::Int, ::POD)
-    U, _, _ = svd(model.snapshot)
-    model.reduced_basis = U[:, 1:k]
+    model.reduced_basis = _left_singular_vectors(model.snapshot, k)
 end
 
-function reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftEVD)
-    snapshot = model.snapshot
-    @assert mod(size(snapshot, 1), 2)==0 "The solutions in the snapshot are not sympletic"
-    n = floor(Int, size(snapshot, 1)/2)
-    q, p = snapshot[1:n, :], snapshot[(n + 1):end, :]
-    cotangent_snap = hcat(q, p)
-    U = svd(cotangent_snap).U[:, 1:k]
-    reduced_basis = zeros(2*n, 2*k)
-    reduced_basis[1:n, 1:k] = U
-    reduced_basis[(n + 1):(2 * n), (k + 1):(2 * k)] = U
-    model.reduced_basis = reduced_basis
+# the first `k` left singular vectors of `A`, completed to an orthonormal set where `A` has
+# fewer than `k` of them
+function _left_singular_vectors(A, k)
+    U = svd(A).U
+    r = size(U, 2)
+    k ≤ r && return U[:, 1:k]
+    k ≤ size(U, 1) || throw(BoundsError(U, (:, 1:k)))
+    # the trailing columns of the full `Q` of `U` are orthogonal to `U`; this builds `N × k`
+    # and not the `N × N` factor of a full SVD
+    B = qr(U).Q * Matrix{eltype(U)}(I, size(U, 1), k)
+    B[:, 1:r] = U
+    B
 end
 
-# function reduce!(model::ReducedBasisModel,k::Int,::CotangentLiftEVD)
-#     snapshot = model.snapshot
-#     @assert mod(size(snapshot,1),2)==0 "The solutions in the snapshot are not sympletic"
-#     n = floor(Int,size(snapshot,1)/2)
-#     q,p = snapshot[1:n,:],snapshot[n+1:end,:]
-#     cotangent_snap = hcat(q,p)
-#     U = eigen(cotangent_snap).vectors[:,1:k]
-#     reduced_basis = zeros(2*n,2*k)
-#     reduced_basis[1:n,1:k] = U
-#     reduced_basis[n+1:2*n,k+1:2*k] = U
-#     model.reduced_basis = reduced_basis
-# end
+# `n`, `q` and `p` of a snapshot with `2n` rows
+function _split_snapshot(snapshot)
+    @assert iseven(size(snapshot, 1)) "The solutions in the snapshot are not symplectic"
+    n = size(snapshot, 1) ÷ 2
+    n, snapshot[1:n, :], snapshot[(n + 1):end, :]
+end
 
-function reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
-    snapshot = model.snapshot
-    @assert mod(size(snapshot, 1), 2) == 0 "The solutions in the snapshot are not symplectic"
-    n = floor(Int, size(snapshot, 1)/2)
-    q, p = snapshot[1:n, :], snapshot[(n + 1):end, :]
-    csvd_snap = q + 1im * p
-    U = svd(csvd_snap).U[:, 1:k]
+# the `2n × 2k` matrix `blockdiag(U, U)`
+function _cotangent_lift(U)
+    n, k = size(U)
+    A = zeros(eltype(U), 2n, 2k)
+    A[1:n, 1:k] = U
+    A[(n + 1):(2n), (k + 1):(2k)] = U
+    A
+end
+
+function reduce!(model::ReducedBasisModel{AT, <:Real}, k::Int, ::CotangentLiftSVD) where {AT}
+    _, q, p = _split_snapshot(model.snapshot)
+    model.reduced_basis = _cotangent_lift(_left_singular_vectors(hcat(q, p), k))
+end
+
+function reduce!(
+        model::ReducedBasisModel{AT, T}, k::Int, ::CotangentLiftEVD) where {AT, T <: Real}
+    n, q, p = _split_snapshot(model.snapshot)
+    # scaling leaves the eigenvectors unchanged, and keeps the products finite and nonzero
+    scale = maximum(abs, model.snapshot)
+    scale = iszero(scale) ? one(scale) : scale
+    q, p = q / scale, p / scale
+    gram = Symmetric(q * q' + p * p')
+    # `eigen` sorts the eigenvalues in ascending order: take the `k` largest, largest first.
+    # It computes a `Float16` matrix in `Float32`, so the vectors are converted to `T`.
+    U = eigen(gram, (n - k + 1):n).vectors[:, k:-1:1]
+    model.reduced_basis = _cotangent_lift(convert(Matrix{T}, U))
+end
+
+function reduce!(model::ReducedBasisModel{AT, <:Real}, k::Int, ::ComplexSVD) where {AT}
+    n, q, p = _split_snapshot(model.snapshot)
+    U = _left_singular_vectors(q + im * p, k)
     Φ, Ψ = real.(U), imag.(U)
-    reduced_basis = zeros(2*n, 2*k)
+    reduced_basis = zeros(eltype(Φ), 2n, 2k)
     reduced_basis[1:n, 1:k] = Φ
-    reduced_basis[1:n, (k + 1):(2 * k)] = -Ψ
-    reduced_basis[(n + 1):(2 * n), 1:k] = Ψ
-    reduced_basis[(n + 1):(2 * n), (k + 1):(2 * k)] = Φ
+    reduced_basis[1:n, (k + 1):(2k)] = -Ψ
+    reduced_basis[(n + 1):(2n), 1:k] = Ψ
+    reduced_basis[(n + 1):(2n), (k + 1):(2k)] = Φ
     model.reduced_basis = reduced_basis
 end
 

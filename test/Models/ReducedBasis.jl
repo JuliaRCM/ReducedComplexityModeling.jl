@@ -15,8 +15,9 @@ function lowrank_snapshot(rng, n, k, m)
     vcat(V * randn(rng, k, m), V * randn(rng, k, m))
 end
 
-@testset "reduce! with $(nameof(typeof(alg)))" for alg in (
-    RCM.CotangentLiftEVD(), RCM.ComplexSVD())
+const SYMPLECTIC_ALGS = (RCM.CotangentLiftSVD(), RCM.CotangentLiftEVD(), RCM.ComplexSVD())
+
+@testset "reduce! with $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
     n, k, m = 4, 2, 10
     X = lowrank_snapshot(Xoshiro(1), n, k, m)
     model = ReducedBasisModel(alg, X)
@@ -28,4 +29,73 @@ end
     @test A' * A ≈ I(2k) atol=1e-12
     @test A' * canonical_J(n) * A ≈ canonical_J(k) atol=1e-12
     @test A * (A' * X) ≈ X rtol=1e-12
+end
+
+@testset "The cotangent lift by SVD and by EVD span the same space" begin
+    n, k, m = 6, 3, 12
+    X = lowrank_snapshot(Xoshiro(2), n, k, m)
+    A_svd = reduce!(ReducedBasisModel(RCM.CotangentLiftSVD(), X), k, RCM.CotangentLiftSVD())
+    A_evd = reduce!(ReducedBasisModel(RCM.CotangentLiftEVD(), X), k, RCM.CotangentLiftEVD())
+    # the orthogonal projectors on the two column spaces agree
+    @test A_svd * A_svd' ≈ A_evd * A_evd' atol=1e-12
+end
+
+@testset "CotangentLiftEVD with a snapshot of extreme scale, $magnitude" for magnitude in (1e160, 1e-160)
+    n, k, m = 4, 2, 10
+    X = lowrank_snapshot(Xoshiro(5), n, k, m)
+    A_ref = reduce!(ReducedBasisModel(RCM.CotangentLiftSVD(), X), k, RCM.CotangentLiftSVD())
+    alg = RCM.CotangentLiftEVD()
+    A = reduce!(ReducedBasisModel(alg, magnitude .* X), k, alg)
+    @test all(isfinite, A)
+    @test A * A' ≈ A_ref * A_ref' atol=1e-12
+end
+
+@testset "The symplectic bases reject a complex snapshot, $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
+    X = ComplexF64[1 0; im 0; 0 0; 0 0]
+    @test_throws MethodError reduce!(ReducedBasisModel(alg, X), 1, alg)
+end
+
+@testset "reduce! beyond the thin SVD, $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
+    # a 6 × 1 snapshot has n = 3 and one snapshot column, so k = 2 and k = 3 need completion
+    X = reshape(Float64[1, 2, 3, 4, 5, 6], 6, 1)
+    for k in 1:3
+        A = reduce!(ReducedBasisModel(alg, X), k, alg)
+        @test size(A) == (6, 2k)
+        @test A' * A ≈ I(2k) atol=1e-12
+        @test A' * canonical_J(3) * A ≈ canonical_J(k) atol=1e-12
+    end
+end
+
+@testset "POD beyond the thin SVD" begin
+    X = reshape(Float64[1, 2, 3, 4, 5, 6], 6, 1)
+    A = reduce!(ReducedBasisModel(RCM.POD(), X), 2, RCM.POD())
+    @test size(A) == (6, 2)
+    @test A' * A ≈ I(2) atol=1e-12
+end
+
+@testset "An integer snapshot gives a Float64 basis, $(nameof(typeof(alg)))" for alg in (
+    RCM.POD(), SYMPLECTIC_ALGS...)
+    X = [1 2; 3 4; 5 6; 7 8]
+    model = ReducedBasisModel(alg, X)
+    @test model isa ReducedBasisModel{typeof(alg), Float64, Matrix{Int}}
+    @test eltype(reduce!(model, 1, alg)) === Float64
+end
+
+@testset "The basis has the element type of the snapshot, $(nameof(typeof(alg)))" for alg in (
+    RCM.POD(), SYMPLECTIC_ALGS...)
+    for T in (Float16, Float32)
+        X = T.(lowrank_snapshot(Xoshiro(3), 4, 2, 10))
+        model = ReducedBasisModel(alg, X)
+        A = reduce!(model, 2, alg)
+        @test A === model.reduced_basis
+        @test eltype(A) === T
+    end
+end
+
+@testset "The fields of ReducedBasisModel are concretely typed" begin
+    X = lowrank_snapshot(Xoshiro(4), 4, 2, 10)
+    model = ReducedBasisModel(RCM.POD(), X)
+    @test model isa ReducedBasisModel{RCM.POD, Float64, Matrix{Float64}}
+    @test isconcretetype(typeof(model))
+    @test all(isconcretetype, fieldtypes(typeof(model)))
 end

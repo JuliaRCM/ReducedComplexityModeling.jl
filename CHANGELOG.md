@@ -20,7 +20,35 @@ holds the changes since the last release until that release is cut.
   sees it without the export, so `Array` keeps its meaning in a caller's code; what changes is the
   export list that `names(ReducedComplexityModeling)` returns.
 
+- `ReducedBasisModel` has type parameters for the reduction scheme, the element type of the basis
+  and the type of the snapshot, and its three fields are concretely typed. They were `Any`. The
+  constructor takes an `AbstractMatrix` snapshot: a `Vector` throws a `MethodError`. The basis has
+  the floating-point type of the snapshot's element type, so a `Float32` snapshot gives a `Float32`
+  basis, and an integer snapshot gives a `Float64` basis.
+
+- `GeometricIntegratorData` and `GeometricIntegratorEnsembleData` have type parameters, for the
+  solution type, the element type of the snapshot and, for the ensemble, the dimension of the
+  snapshot, and their fields are concretely typed. The fields `snapshot` were `Matrix` and `Array`,
+  and the field `solutions` was a `Vector{GeometricSolution}`. A call that names the type without
+  parameters, such as `::GeometricIntegratorData`, still matches.
+
+- `reduce!(model, k, CotangentLiftEVD())` takes the eigenvectors of the Gram matrix `q qᵀ + p pᵀ`.
+  It took the left singular vectors of `[q p]` before. In exact arithmetic the two bases span the
+  same space where the singular values have a gap at `k`, and the columns can differ in sign and,
+  for equal singular values, in order, so a result that compares the basis entry by entry changes.
+  Where the `k`-th and the next singular value are equal, the two methods can pick different
+  subspaces, and either one is a valid choice. The Gram matrix squares the condition
+  number: the eigenvectors resolve only the singular vectors whose singular values exceed about
+  `sqrt(eps)` times the largest. Where those directions matter, use `CotangentLiftSVD()`, which
+  takes the singular vectors of `[q p]` directly. The eigendecomposition of the `n × n` Gram
+  matrix takes `O(n³)` time and `O(n²)` memory, for a snapshot with `2n` rows.
+
 ### Bug Fixes
+
+- `Parameter(name, minimum, maximum, n)` takes bounds that are a few ULPs apart (K27). A point of
+  `LinRange` that rounds outside the bounds threw an `AssertionError`. It is moved onto the
+  nearest bound now. `Parameter(:a, 0.1, nextfloat(0.1), 22)` threw, and 368 of the counts in
+  `2:500` did for these bounds.
 
 - `Parameter` takes a `Symbol` or a string name in every constructor form. The call
   `Parameter("μ", minimum, maximum, n)` returns a `Parameter` whose samples are those of
@@ -60,8 +88,14 @@ holds the changes since the last release until that release is cut.
 
 - `reduce!(model, k, CotangentLiftEVD())` (K17) and `reduce!(model, k, ComplexSVD())` (K18) no
   longer throw on every call. Each stores a `2n × 2k` basis in `model.reduced_basis`, orthonormal
-  and symplectic (`AᵀJA = J`). Neither algorithm type is exported: a caller reaches them as
-  `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
+  and symplectic (`AᵀJA = J`). `CotangentLiftSVD()`, `CotangentLiftEVD()` and `ComplexSVD()` take
+  a real snapshot: a complex one throws a `MethodError`, because a complex snapshot gives a basis
+  that does not satisfy `AᵀJA = J`.
+  None of the three algorithm types is exported: a caller reaches them as
+  `ReducedComplexityModeling.CotangentLiftSVD`, `ReducedComplexityModeling.CotangentLiftEVD` and
+  `ReducedComplexityModeling.ComplexSVD`. `CotangentLiftEVD()` scales the snapshot by its largest
+  entry before it forms the Gram matrix, so a snapshot of very large or very small entries gives a
+  finite basis.
 
 - Help text: the module and every exported name have a docstring with text. `Parameter`,
   `ParameterSampler` and `CartesianParameterSampler` replace their empty docstrings, and `POD`,
@@ -74,6 +108,34 @@ holds the changes since the last release until that release is cut.
   `h5load(Parameter, file; path = string(p.name))` reads it back. With the default
   `path = "/"`, `h5load(Parameter, file)` throws a `KeyError`. The docstring of
   `ReducedBasisModel` no longer names packages that are not dependencies of this package.
+
+- `reduce!` takes a `k` above the columns of the thin SVD (K22), for `POD()` and for
+  `CotangentLiftSVD()`, `CotangentLiftEVD()` and `ComplexSVD()`, the last three with any `k ≤ n`.
+  It threw a `BoundsError`; the basis is completed with orthonormal vectors now, and stays
+  symplectic. The basis of the three symplectic algorithms has the floating-point type of the
+  snapshot's element type (K23). It was `Float64` for a `Float32` snapshot, and `compose` then
+  promoted the reduced problem to `Float64`. The snapshot of one solution, `GeometricIntegratorData`,
+  has the element type of the solution too. It was `Float64` always.
+
+- `GeometricIntegratorEnsembleData` takes an offset-indexed vector of solutions (K24), and the
+  snapshot functions read a solution that holds only its initial entry (K25). A `step` larger than
+  the number of time steps stores the initial state alone, and `snapshot_matrix` threw a
+  `BoundsError` for it.
+
+### New Features
+
+- `reduce!(model, k, CotangentLiftSVD())` stores the cotangent lift of the first `k` left singular
+  vectors of `[q p]`. The algorithm type is not exported.
+- `scripts/pod_lorenz.jl` draws the Lorenz solution, the reduced solution and its projection with
+  CairoMakie, into the directory of `--results-dir`. It has its own environment in `scripts/`. The
+  original solution uses `LorenzAttractor.plot_phase_portrait` of GeometricProblems 0.10.
+
+### Changed
+
+- The tests no longer plot. `test/integration/pod_lorenz.jl` builds its problem with
+  `LorenzAttractor.odeproblem` of GeometricProblems, in place of a local copy, and
+  `test/helpers/problems.jl` is deleted: its other two functions were empty. `Plots` leaves the
+  test environment, `OffsetArrays` joins it, and the test compat of GeometricProblems is `0.10`.
 
 ## [0.4.1] — 2026-10-29
 

@@ -143,6 +143,19 @@ end
     end
 end
 
+@testset "Bounds a few ULPs apart give samples inside the bounds" begin
+    for T in (Float32, Float64), n in 2:200
+
+        for (a, b) in ((T(0.1), nextfloat(T(0.1))), (T(0.1), nextfloat(T(0.1), 3)))
+            p = Parameter(:a, a, b, n)
+            @test all(s -> a ≤ s ≤ b, collect(p))
+            @test issorted(collect(p))
+            @test first(collect(p)) == a
+            @test last(collect(p)) == b
+        end
+    end
+end
+
 @testset "Parameter show" begin
     p = Parameter(:μ, 0.0, 1.0, 3)
     @test sprint(show, MIME"text/plain"(), p) ==
