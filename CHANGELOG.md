@@ -33,9 +33,13 @@ holds the changes since the last release until that release is cut.
   parameters, such as `::GeometricIntegratorData`, still matches.
 
 - `reduce!(model, k, CotangentLiftEVD())` takes the eigenvectors of the Gram matrix `q qᵀ + p pᵀ`.
-  It took the left singular vectors of `[q p]` before. The two bases span the same space, and the
-  columns can differ in sign and, for equal singular values, in order, so a result that compares
-  the basis entry by entry changes.
+  It took the left singular vectors of `[q p]` before. In exact arithmetic the two bases span the
+  same space, and the columns can differ in sign and, for equal singular values, in order, so a
+  result that compares the basis entry by entry changes. The Gram matrix squares the condition
+  number: the eigenvectors resolve only the singular vectors whose singular values exceed about
+  `sqrt(eps)` times the largest. Where those directions matter, use `CotangentLiftSVD()`, which
+  takes the singular vectors of `[q p]` directly. The eigendecomposition of the `n × n` Gram
+  matrix takes `O(n³)` time and `O(n²)` memory, for a snapshot with `2n` rows.
 
 ### Bug Fixes
 
@@ -81,9 +85,11 @@ holds the changes since the last release until that release is cut.
   before.
 
 - `reduce!(model, k, CotangentLiftEVD())` (K17) and `reduce!(model, k, ComplexSVD())` (K18) no
-  longer throw on every call. Each stores a `2n × 2k` basis in `model.reduced_basis`, orthonormal
-  and symplectic (`AᵀJA = J`). Neither algorithm type is exported: a caller reaches them as
-  `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
+  longer throw on every call. Each stores a `2n × 2k` basis in `model.reduced_basis`. For a real
+  snapshot the basis is orthonormal and symplectic (`AᵀJA = J`). For a complex snapshot,
+  `CotangentLiftEVD()` gives an orthonormal basis that is not symplectic in that sense, while
+  `ComplexSVD()` gives a symplectic one. Neither algorithm type is exported: a caller reaches them
+  as `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
 
 - Help text: the module and every exported name have a docstring with text. `Parameter`,
   `ParameterSampler` and `CartesianParameterSampler` replace their empty docstrings, and `POD`,
