@@ -20,9 +20,10 @@ The bounds have one type `DT`, and the samples have element type `DT`. The sampl
 sorted and without duplicates. Without samples, `samples` is `nothing`. With a count `n`, the
 samples are the points of `LinRange(minimum, maximum, n)`, without duplicates. A point that
 rounds outside the bounds, by a few ULPs, is moved onto the nearest bound. Equal bounds and a
-positive count give the one sample `minimum`. This works for bounds of a type that `LinRange` keeps, such as a float or a `Rational`; unequal
-integer bounds with a count throw a `MethodError`, because their `LinRange` has a float element
-type. With only a vector of samples, the bounds are its smallest and largest entry.
+positive count give the one sample `minimum`. This works for bounds of a type that `LinRange`
+keeps, such as a float or a `Rational`; unequal integer bounds with a count throw a `MethodError`,
+because their `LinRange` has a float element type. With only a vector of samples, the bounds are
+its smallest and largest entry.
 
 `minimum > maximum`, or a sample outside `[minimum, maximum]`, throws an `AssertionError`.
 """

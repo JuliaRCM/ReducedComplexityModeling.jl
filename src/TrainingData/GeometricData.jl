@@ -115,8 +115,7 @@ struct GeometricIntegratorEnsembleData{ST <: GeometricSolution, T, N}
             solutions::AbstractVector{S},
             deps::AbstractDependence
     ) where {S <: GeometricSolution}
-        # `copyto!` copies by position, so an offset-indexed vector works
-        stored = copyto!(Vector{S}(undef, length(solutions)), solutions)
+        stored = collect(solutions)
         snapshot = Array(solutions, deps)
         new{S, eltype(snapshot), ndims(snapshot)}(stored, snapshot)
     end

@@ -14,6 +14,8 @@ using ReducedComplexityModeling: POD, reduce!, compose
 
 function results_dir(args)
     i = findfirst(==("--results-dir"), args)
+    i === nothing || i < lastindex(args) ||
+        throw(ArgumentError("--results-dir needs a directory"))
     dir = i === nothing ? "results" : args[i + 1]
     mkpath(dir)
 end

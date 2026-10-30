@@ -39,10 +39,14 @@ the first `k` left singular vectors of the snapshot matrix. With `CotangentLiftS
 rows, `q` above `p`, and the basis is an orthonormal and symplectic `2n × 2k` matrix, for
 `k ≤ n`. `CotangentLiftSVD()` and `CotangentLiftEVD()` give the cotangent lift of the first `k`
 left singular vectors of `[q p]`: the first takes them from the singular value decomposition of
-`[q p]`, the second from the eigendecomposition of the Gram matrix `q qᵀ + p pᵀ`. `ComplexSVD()`
-gives the real form of the first `k` left singular vectors of `q + im * p`. Where `k` exceeds the
-number of singular vectors, the basis is completed with orthonormal vectors. The basis has the
-floating-point type of the snapshot's element type: `Float64` for an integer snapshot.
+`[q p]`, the second from the eigendecomposition of the Gram matrix `q qᵀ + p pᵀ`. The Gram matrix
+squares the condition number: in the floating-point type `T` of the basis, `CotangentLiftEVD()`
+resolves only the singular vectors whose singular values exceed about `sqrt(eps(T))` times the
+largest, and its eigendecomposition of an `n × n` matrix takes `O(n³)` time and `O(n²)` memory.
+`ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. Where
+`k` exceeds the number of singular vectors, the basis is completed with orthonormal vectors. The
+basis has the floating-point type of the snapshot's element type: `Float64` for an integer
+snapshot.
 """
 function reduce!(model::ReducedBasisModel, k::Int, ::POD)
     model.reduced_basis = _left_singular_vectors(model.snapshot, k)
@@ -51,7 +55,15 @@ end
 # the first `k` left singular vectors of `A`, completed to an orthonormal set where `A` has
 # fewer than `k` of them
 function _left_singular_vectors(A, k)
-    svd(A; full = k > minimum(size(A))).U[:, 1:k]
+    U = svd(A).U
+    r = size(U, 2)
+    k ≤ r && return U[:, 1:k]
+    k ≤ size(U, 1) || throw(BoundsError(U, (:, 1:k)))
+    # the trailing columns of the full `Q` of `U` are orthogonal to `U`; this builds `N × k`
+    # and not the `N × N` factor of a full SVD
+    B = qr(U).Q * Matrix{eltype(U)}(I, size(U, 1), k)
+    B[:, 1:r] = U
+    B
 end
 
 # `n`, `q` and `p` of a snapshot with `2n` rows
@@ -78,7 +90,7 @@ end
 function reduce!(
         model::ReducedBasisModel{AT, T}, k::Int, ::CotangentLiftEVD) where {AT, T}
     n, q, p = _split_snapshot(model.snapshot)
-    gram = Symmetric(q * q' + p * p')
+    gram = Hermitian(q * q' + p * p')
     # `eigen` sorts the eigenvalues in ascending order: take the `k` largest, largest first.
     # It computes a `Float16` matrix in `Float32`, so the vectors are converted to `T`.
     U = eigen(gram, (n - k + 1):n).vectors[:, k:-1:1]

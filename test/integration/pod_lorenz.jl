@@ -39,5 +39,3 @@ begin
         @test psol ≈ data.snapshot rtol=1e-12
     end
 end
-
-# Heat Equation. Solver first. Then use the Reduced basis.
