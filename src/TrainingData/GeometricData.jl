@@ -18,12 +18,13 @@ The solution of a geometric integrator and its snapshot matrix: the field `snaps
 with one row per component of the state `q` and one column per entry of `solution.q`, the
 initial state included.
 """
-struct GeometricIntegratorData
-    solution::GeometricSolution
-    snapshot::Matrix
+struct GeometricIntegratorData{ST <: GeometricSolution, T}
+    solution::ST
+    snapshot::Matrix{T}
 
-    function GeometricIntegratorData(solution::GeometricSolution)
-        new(solution, snapshot_matrix(solution.q))
+    function GeometricIntegratorData(solution::ST) where {ST <: GeometricSolution}
+        snapshot = snapshot_matrix(solution.q)
+        new{ST, eltype(snapshot)}(solution, snapshot)
     end
 
     # function GeometricIntegratorData(solution::ODESolution)
@@ -106,15 +107,18 @@ The solutions of an ensemble of geometric integrations and their snapshot, in th
 `deps` selects: [`Dependent`](@ref) or [`Independent`](@ref). The element type of the snapshot
 is the promotion of the element types of the states `q` of all solutions.
 """
-struct GeometricIntegratorEnsembleData
-    solutions::Vector{GeometricSolution}
-    snapshot::Array
+struct GeometricIntegratorEnsembleData{ST <: GeometricSolution, T, N}
+    solutions::Vector{ST}
+    snapshot::Array{T, N}
 
     function GeometricIntegratorEnsembleData(
-            solutions::AbstractVector{<:GeometricSolution}, deps::AbstractDependence)
+            solutions::AbstractVector{S},
+            deps::AbstractDependence
+    ) where {S <: GeometricSolution}
         # `copyto!` copies by position, so an offset-indexed vector works
-        stored = copyto!(Vector{GeometricSolution}(undef, length(solutions)), solutions)
-        new(stored, Array(solutions, deps))
+        stored = copyto!(Vector{S}(undef, length(solutions)), solutions)
+        snapshot = Array(solutions, deps)
+        new{S, eltype(snapshot), ndims(snapshot)}(stored, snapshot)
     end
 
     # function GeometricIntegratorEnsembleData(solutions::Vector{ODESolution},deps::AbstractDependence)

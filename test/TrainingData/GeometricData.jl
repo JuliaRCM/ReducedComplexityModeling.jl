@@ -101,6 +101,20 @@ end
           reshape([1.0, 0.0, 1.0, 0.0], 2, 1, 2)
 end
 
+@testset "The fields of the data types are concretely typed" begin
+    data = GeometricIntegratorData(sol1)
+    @test isconcretetype(typeof(data))
+    @test all(isconcretetype, fieldtypes(typeof(data)))
+    @test typeof(data.snapshot) === Matrix{Float64}
+
+    for (deps, N) in ((Dependent(), 2), (Independent(), 3))
+        ens = GeometricIntegratorEnsembleData([sol1, sol2], deps)
+        @test isconcretetype(typeof(ens))
+        @test all(isconcretetype, fieldtypes(typeof(ens)))
+        @test typeof(ens.snapshot) === Array{Float64, N}
+    end
+end
+
 @testset "A vector with a concrete element type" begin
     sols = [sol1, sol2]
     @test !(sols isa Vector{RCM.GeometricSolution})

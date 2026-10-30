@@ -18,9 +18,9 @@ samples between them. In every form, `name` is a `Symbol` or a string, which is 
 
 The bounds have one type `DT`, and the samples have element type `DT`. The samples are stored
 sorted and without duplicates. Without samples, `samples` is `nothing`. With a count `n`, the
-samples are the points of `LinRange(minimum, maximum, n)`, without duplicates. Equal bounds and a
-positive count give the one sample `minimum`, because `LinRange` can round above equal bounds.
-This works for bounds of a type that `LinRange` keeps, such as a float or a `Rational`; unequal
+samples are the points of `LinRange(minimum, maximum, n)`, without duplicates. A point that
+rounds outside the bounds, by a few ULPs, is moved onto the nearest bound. Equal bounds and a
+positive count give the one sample `minimum`. This works for bounds of a type that `LinRange` keeps, such as a float or a `Rational`; unequal
 integer bounds with a count throw a `MethodError`, because their `LinRange` has a float element
 type. With only a vector of samples, the bounds are its smallest and largest entry.
 
@@ -48,9 +48,10 @@ function Parameter(name, minimum::DT, maximum::DT) where {DT}
     Parameter(name, minimum, maximum, nothing)
 end
 function Parameter(name, minimum::DT, maximum::DT, n::Int) where {DT}
-    # `LinRange(0.1, 0.1, 6)` holds `0.10000000000000002`, so equal bounds give their one sample
+    # `LinRange(0.1, 0.1, 6)` holds `0.10000000000000002`, so equal bounds give their one sample.
+    # Distinct bounds can also round a point a few ULPs outside: the clamp puts it back.
     samples = minimum == maximum && n ≥ 0 ? fill(minimum, min(n, 1)) :
-              LinRange(minimum, maximum, n)
+              clamp.(LinRange(minimum, maximum, n), minimum, maximum)
     Parameter(name, minimum, maximum, samples)
 end
 function Parameter(name, samples::AbstractVector)

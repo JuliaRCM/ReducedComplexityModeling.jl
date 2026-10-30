@@ -111,12 +111,3 @@
   third element is a fallback that no build reads.
 - **Kind:** defect
 - **Found:** 2026-10-28 (critic round 1b)
-
-### K27 · `Parameter` with a count throws for distinct bounds one or a few ULPs apart
-
-- **Location:** `src/parameters/parameter.jl`, `Parameter(name, minimum, maximum, n::Int)`.
-- **Evidence:** `Parameter(:a, 0.1, nextfloat(0.1), 22)` throws an `AssertionError`, because
-  `LinRange(0.1, nextfloat(0.1), n)` has a point outside the bounds for 368 of the counts in
-  `2:500`. The special case for equal bounds does not cover distinct bounds.
-- **Kind:** defect
-- **Found:** PR #64 (pre-PR verification, 2026-10-29)

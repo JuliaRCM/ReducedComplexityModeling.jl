@@ -26,12 +26,23 @@ holds the changes since the last release until that release is cut.
   the floating-point type of the snapshot's element type, so a `Float32` snapshot gives a `Float32`
   basis, and an integer snapshot gives a `Float64` basis.
 
+- `GeometricIntegratorData` and `GeometricIntegratorEnsembleData` have type parameters, for the
+  solution type, the element type of the snapshot and, for the ensemble, the dimension of the
+  snapshot, and their fields are concretely typed. The fields `snapshot` were `Matrix` and `Array`,
+  and the field `solutions` was a `Vector{GeometricSolution}`. A call that names the type without
+  parameters, such as `::GeometricIntegratorData`, still matches.
+
 - `reduce!(model, k, CotangentLiftEVD())` takes the eigenvectors of the Gram matrix `q qᵀ + p pᵀ`.
   It took the left singular vectors of `[q p]` before. The two bases span the same space, and the
   columns can differ in sign and, for equal singular values, in order, so a result that compares
   the basis entry by entry changes.
 
 ### Bug Fixes
+
+- `Parameter(name, minimum, maximum, n)` takes bounds that are a few ULPs apart (K27). A point of
+  `LinRange` that rounds outside the bounds threw an `AssertionError`. It is moved onto the
+  nearest bound now. `Parameter(:a, 0.1, nextfloat(0.1), 22)` threw, and 368 of the counts in
+  `2:500` did for these bounds.
 
 - `Parameter` takes a `Symbol` or a string name in every constructor form. The call
   `Parameter("μ", minimum, maximum, n)` returns a `Parameter` whose samples are those of
