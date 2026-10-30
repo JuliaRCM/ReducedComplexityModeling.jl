@@ -8,7 +8,7 @@ function snapshot_matrix(sol::DataSeries)
     for (i, elem) in enumerate(sol)
         Z[i, :] .= elem
     end
-    Array(Z')
+    permutedims(Z)
 end
 
 """
@@ -78,7 +78,7 @@ function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Dependent)
             i += 1
         end
     end
-    Array(Z')
+    permutedims(Z)
 end
 
 function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Independent)
