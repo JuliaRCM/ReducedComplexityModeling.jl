@@ -1,4 +1,5 @@
-include("../helpers/problems.jl")
+using GeometricIntegrators
+using GeometricProblems.LorenzAttractor
 using LinearAlgebra
 using ReducedComplexityModeling
 using ReducedComplexityModeling: POD, reduce!, compose
@@ -12,7 +13,8 @@ begin
 
     # 1. Get data. A short time span: on (0, 100) the Lorenz system is chaotic and grows the
     # round-off of the reduced integration to O(1).
-    prob, sol = lorenz_problem(; tspan = (0.0, 1.0))
+    prob = LorenzAttractor.odeproblem([1.0, 0.0, 0.0]; timespan = (0.0, 1.0))
+    sol = integrate(prob, ExplicitEuler())
     data = GeometricIntegratorData(sol)
 
     # 2. Define a model with an appropriate algorithm.
@@ -36,15 +38,6 @@ begin
         @test size(psol) == size(data.snapshot)
         @test psol ≈ data.snapshot rtol=1e-12
     end
-
-    #------------------------------------------------------------------------------
-
-    # Visualization and Shennanigans
-    using Plots
-    atemp = 1:k
-    display(plot(red_sol.q, vars = (1, 2), title = "Reduced Basis"))
-    display(plot(psol[1, :], psol[2, :], psol[3, :], title = "Remade"))
-    display(plot(sol.q, vars = (1, 2, 3), title = "Original"))
 end
 
 # Heat Equation. Solver first. Then use the Reduced basis.

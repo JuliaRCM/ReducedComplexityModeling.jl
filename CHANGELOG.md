@@ -73,6 +73,37 @@ holds the changes since the last release until that release is cut.
   `path = "/"`, `h5load(Parameter, file)` throws a `KeyError`. The docstring of
   `ReducedBasisModel` no longer names packages that are not dependencies of this package.
 
+- `reduce!` with `CotangentLiftSVD()`, `CotangentLiftEVD()` or `ComplexSVD()` takes any `k ≤ n`
+  (K22). A `k` above the columns of the thin SVD threw a `BoundsError`; the basis is completed with
+  orthonormal vectors now, and stays symplectic. The basis has the element type of the snapshot
+  (K23). It was `Float64` for a `Float32` snapshot, and `compose` then promoted the reduced problem
+  to `Float64`.
+
+- `GeometricIntegratorEnsembleData` takes an offset-indexed vector of solutions (K24), and the
+  snapshot functions read a solution that holds only its initial entry (K25). A `step` larger than
+  the number of time steps stores the initial state alone, and `snapshot_matrix` threw a
+  `BoundsError` for it.
+
+### Added
+
+- `reduce!(model, k, CotangentLiftSVD())` stores the cotangent lift of the first `k` left singular
+  vectors of `[q p]`. `CotangentLiftEVD()` took that basis from the SVD before. It takes the
+  eigenvectors of the Gram matrix `q qᵀ + p pᵀ` now, which span the same space. Neither algorithm
+  type is exported.
+- `scripts/pod_lorenz.jl` draws the Lorenz solution, the reduced solution and its projection with
+  CairoMakie, into the directory of `--results-dir`. It has its own environment in `scripts/`. The
+  original solution uses `LorenzAttractor.plot_phase_portrait` of GeometricProblems 0.10.
+
+### Changed
+
+- `ReducedBasisModel` has type parameters for the reduction scheme, the element type and the type
+  of the snapshot, and its field `reduced_basis` is a `Matrix` of that element type. The three
+  fields were `Any`. A model built from a `Float32` snapshot stores a `Float32` basis.
+- The tests no longer plot. `test/integration/pod_lorenz.jl` builds its problem with
+  `LorenzAttractor.odeproblem` of GeometricProblems, in place of a local copy, and
+  `test/helpers/problems.jl` is deleted: its other two functions were empty. `Plots` leaves the
+  test environment, `OffsetArrays` joins it, and the test compat of GeometricProblems is `0.10`.
+
 ## [0.4.1] — 2026-10-29
 
 ### Changed

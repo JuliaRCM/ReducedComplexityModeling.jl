@@ -15,8 +15,9 @@ function lowrank_snapshot(rng, n, k, m)
     vcat(V * randn(rng, k, m), V * randn(rng, k, m))
 end
 
-@testset "reduce! with $(nameof(typeof(alg)))" for alg in (
-    RCM.CotangentLiftEVD(), RCM.ComplexSVD())
+const SYMPLECTIC_ALGS = (RCM.CotangentLiftSVD(), RCM.CotangentLiftEVD(), RCM.ComplexSVD())
+
+@testset "reduce! with $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
     n, k, m = 4, 2, 10
     X = lowrank_snapshot(Xoshiro(1), n, k, m)
     model = ReducedBasisModel(alg, X)
@@ -28,4 +29,39 @@ end
     @test A' * A ≈ I(2k) atol=1e-12
     @test A' * canonical_J(n) * A ≈ canonical_J(k) atol=1e-12
     @test A * (A' * X) ≈ X rtol=1e-12
+end
+
+@testset "The cotangent lift by SVD and by EVD span the same space" begin
+    n, k, m = 6, 3, 12
+    X = lowrank_snapshot(Xoshiro(2), n, k, m)
+    A_svd = reduce!(ReducedBasisModel(RCM.CotangentLiftSVD(), X), k, RCM.CotangentLiftSVD())
+    A_evd = reduce!(ReducedBasisModel(RCM.CotangentLiftEVD(), X), k, RCM.CotangentLiftEVD())
+    # the orthogonal projectors on the two column spaces agree
+    @test A_svd * A_svd' ≈ A_evd * A_evd' atol=1e-12
+end
+
+@testset "reduce! beyond the thin SVD, $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
+    # a 6 × 1 snapshot has n = 3 and one snapshot column, so k = 2 and k = 3 need completion
+    X = reshape(Float64[1, 2, 3, 4, 5, 6], 6, 1)
+    for k in 1:3
+        A = reduce!(ReducedBasisModel(alg, X), k, alg)
+        @test size(A) == (6, 2k)
+        @test A' * A ≈ I(2k) atol=1e-12
+        @test A' * canonical_J(3) * A ≈ canonical_J(k) atol=1e-12
+    end
+end
+
+@testset "The basis has the element type of the snapshot, $(nameof(typeof(alg)))" for alg in (
+    RCM.POD(), SYMPLECTIC_ALGS...)
+    X = Float32.(lowrank_snapshot(Xoshiro(3), 4, 2, 10))
+    A = reduce!(ReducedBasisModel(alg, X), 2, alg)
+    @test eltype(A) === Float32
+end
+
+@testset "The fields of ReducedBasisModel are concretely typed" begin
+    X = lowrank_snapshot(Xoshiro(4), 4, 2, 10)
+    model = ReducedBasisModel(RCM.POD(), X)
+    @test model isa ReducedBasisModel{RCM.POD, Float64, Matrix{Float64}}
+    @test isconcretetype(typeof(model))
+    @test all(isconcretetype, fieldtypes(typeof(model)))
 end

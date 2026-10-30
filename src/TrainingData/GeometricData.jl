@@ -3,7 +3,7 @@
 
 function snapshot_matrix(sol::DataSeries)
     n1 = length(sol)
-    n2 = length(sol[1])
+    n2 = length(first(sol))
     Z = zeros(n1, n2)
     for (i, elem) in enumerate(sol)
         Z[i, :] .= elem
@@ -61,13 +61,13 @@ struct Independent <: AbstractDependence end
 
 # the element type that holds the state `q` of every solution without loss
 function _snapshot_eltype(solutions)
-    mapreduce(solution -> eltype(solution.q[1]), promote_type, solutions)
+    mapreduce(solution -> eltype(first(solution.q)), promote_type, solutions)
 end
 
 function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Dependent)
     nx = sum(solution -> length(solution.q), solutions)
-    ny = length(solutions[1].q[1])
-    all(solution -> length(solution.q[1]) == ny, solutions) ||
+    ny = length(first(first(solutions).q))
+    all(solution -> length(first(solution.q)) == ny, solutions) ||
         throw(ArgumentError("the Dependent layout needs solutions with equal state dimensions"))
     Z = zeros(_snapshot_eltype(solutions), nx, ny)
 
@@ -83,11 +83,11 @@ end
 
 function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Independent)
     ns = length(solutions)
-    nx = length(solutions[1].q)
-    ny = length(solutions[1].q[1])
+    nx = length(first(solutions).q)
+    ny = length(first(first(solutions).q))
     all(solution -> length(solution.q) == nx, solutions) ||
         throw(ArgumentError("the Independent layout needs solutions with equal numbers of entries"))
-    all(solution -> length(solution.q[1]) == ny, solutions) ||
+    all(solution -> length(first(solution.q)) == ny, solutions) ||
         throw(ArgumentError("the Independent layout needs solutions with equal state dimensions"))
     Z = zeros(_snapshot_eltype(solutions), nx, ny, ns)
 
@@ -112,7 +112,9 @@ struct GeometricIntegratorEnsembleData
 
     function GeometricIntegratorEnsembleData(
             solutions::AbstractVector{<:GeometricSolution}, deps::AbstractDependence)
-        new(solutions, Array(solutions, deps))
+        # `copyto!` copies by position, so an offset-indexed vector works
+        stored = copyto!(Vector{GeometricSolution}(undef, length(solutions)), solutions)
+        new(stored, Array(solutions, deps))
     end
 
     # function GeometricIntegratorEnsembleData(solutions::Vector{ODESolution},deps::AbstractDependence)
