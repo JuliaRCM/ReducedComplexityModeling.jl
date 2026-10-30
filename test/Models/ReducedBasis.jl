@@ -66,11 +66,15 @@ end
     @test eltype(reduce!(model, 1, alg)) === Float64
 end
 
-@testset "The basis has the element type of the snapshot,$(nameof(typeof(alg)))" for alg in (
+@testset "The basis has the element type of the snapshot, $(nameof(typeof(alg)))" for alg in (
     RCM.POD(), SYMPLECTIC_ALGS...)
-    X = Float32.(lowrank_snapshot(Xoshiro(3), 4, 2, 10))
-    A = reduce!(ReducedBasisModel(alg, X), 2, alg)
-    @test eltype(A) === Float32
+    for T in (Float16, Float32)
+        X = T.(lowrank_snapshot(Xoshiro(3), 4, 2, 10))
+        model = ReducedBasisModel(alg, X)
+        A = reduce!(model, 2, alg)
+        @test A === model.reduced_basis
+        @test eltype(A) === T
+    end
 end
 
 @testset "The fields of ReducedBasisModel are concretely typed" begin

@@ -75,12 +75,14 @@ function reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftSVD)
     model.reduced_basis = _cotangent_lift(_left_singular_vectors(hcat(q, p), k))
 end
 
-function reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftEVD)
+function reduce!(
+        model::ReducedBasisModel{AT, T}, k::Int, ::CotangentLiftEVD) where {AT, T}
     n, q, p = _split_snapshot(model.snapshot)
     gram = Symmetric(q * q' + p * p')
-    # `eigen` sorts the eigenvalues in ascending order: take the `k` largest, largest first
+    # `eigen` sorts the eigenvalues in ascending order: take the `k` largest, largest first.
+    # It computes a `Float16` matrix in `Float32`, so the vectors are converted to `T`.
     U = eigen(gram, (n - k + 1):n).vectors[:, k:-1:1]
-    model.reduced_basis = _cotangent_lift(U)
+    model.reduced_basis = _cotangent_lift(convert(Matrix{T}, U))
 end
 
 function reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)

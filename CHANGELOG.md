@@ -102,7 +102,7 @@ holds the changes since the last release until that release is cut.
 ### New Features
 
 - `reduce!(model, k, CotangentLiftSVD())` stores the cotangent lift of the first `k` left singular
-  vectors of `[q p]`. Neither algorithm type is exported.
+  vectors of `[q p]`. The algorithm type is not exported.
 - `scripts/pod_lorenz.jl` draws the Lorenz solution, the reduced solution and its projection with
   CairoMakie, into the directory of `--results-dir`. It has its own environment in `scripts/`. The
   original solution uses `LorenzAttractor.plot_phase_portrait` of GeometricProblems 0.10.
