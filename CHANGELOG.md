@@ -91,8 +91,11 @@ holds the changes since the last release until that release is cut.
   and symplectic (`AᵀJA = J`). `CotangentLiftSVD()`, `CotangentLiftEVD()` and `ComplexSVD()` take
   a real snapshot: a complex one throws a `MethodError`, because a complex snapshot gives a basis
   that does not satisfy `AᵀJA = J`.
-  Neither algorithm type is exported: a caller reaches them as
-  `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
+  None of the three algorithm types is exported: a caller reaches them as
+  `ReducedComplexityModeling.CotangentLiftSVD`, `ReducedComplexityModeling.CotangentLiftEVD` and
+  `ReducedComplexityModeling.ComplexSVD`. `CotangentLiftEVD()` scales the snapshot by its largest
+  entry before it forms the Gram matrix, so a snapshot of very large or very small entries gives a
+  finite basis.
 
 - Help text: the module and every exported name have a docstring with text. `Parameter`,
   `ParameterSampler` and `CartesianParameterSampler` replace their empty docstrings, and `POD`,

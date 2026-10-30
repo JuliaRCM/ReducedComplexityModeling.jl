@@ -90,6 +90,10 @@ end
 function reduce!(
         model::ReducedBasisModel{AT, T}, k::Int, ::CotangentLiftEVD) where {AT, T <: Real}
     n, q, p = _split_snapshot(model.snapshot)
+    # scaling leaves the eigenvectors unchanged, and keeps the products finite and nonzero
+    scale = maximum(abs, model.snapshot)
+    scale = iszero(scale) ? one(scale) : scale
+    q, p = q / scale, p / scale
     gram = Symmetric(q * q' + p * p')
     # `eigen` sorts the eigenvalues in ascending order: take the `k` largest, largest first.
     # It computes a `Float16` matrix in `Float32`, so the vectors are converted to `T`.

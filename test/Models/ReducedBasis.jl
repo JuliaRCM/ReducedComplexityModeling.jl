@@ -40,6 +40,16 @@ end
     @test A_svd * A_svd' ≈ A_evd * A_evd' atol=1e-12
 end
 
+@testset "CotangentLiftEVD with a snapshot of extreme scale, $magnitude" for magnitude in (1e160, 1e-160)
+    n, k, m = 4, 2, 10
+    X = lowrank_snapshot(Xoshiro(5), n, k, m)
+    A_ref = reduce!(ReducedBasisModel(RCM.CotangentLiftSVD(), X), k, RCM.CotangentLiftSVD())
+    alg = RCM.CotangentLiftEVD()
+    A = reduce!(ReducedBasisModel(alg, magnitude .* X), k, alg)
+    @test all(isfinite, A)
+    @test A * A' ≈ A_ref * A_ref' atol=1e-12
+end
+
 @testset "The symplectic bases reject a complex snapshot, $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
     X = ComplexF64[1 0; im 0; 0 0; 0 0]
     @test_throws MethodError reduce!(ReducedBasisModel(alg, X), 1, alg)
