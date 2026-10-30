@@ -34,8 +34,10 @@ holds the changes since the last release until that release is cut.
 
 - `reduce!(model, k, CotangentLiftEVD())` takes the eigenvectors of the Gram matrix `q qᵀ + p pᵀ`.
   It took the left singular vectors of `[q p]` before. In exact arithmetic the two bases span the
-  same space, and the columns can differ in sign and, for equal singular values, in order, so a
-  result that compares the basis entry by entry changes. The Gram matrix squares the condition
+  same space where the singular values have a gap at `k`, and the columns can differ in sign and,
+  for equal singular values, in order, so a result that compares the basis entry by entry changes.
+  Where the `k`-th and the next singular value are equal, the two methods can pick different
+  subspaces, and either one is a valid choice. The Gram matrix squares the condition
   number: the eigenvectors resolve only the singular vectors whose singular values exceed about
   `sqrt(eps)` times the largest. Where those directions matter, use `CotangentLiftSVD()`, which
   takes the singular vectors of `[q p]` directly. The eigendecomposition of the `n × n` Gram

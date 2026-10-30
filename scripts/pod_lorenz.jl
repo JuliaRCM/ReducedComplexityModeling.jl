@@ -1,6 +1,7 @@
 # Proper orthogonal decomposition of the Lorenz system: the full solution, the solution of the
 # reduced problem and its projection back to the full space.
 #
+#     julia --project=scripts -e 'using Pkg; Pkg.instantiate()'
 #     julia --project=scripts scripts/pod_lorenz.jl [--results-dir DIR]
 #
 # `DIR` defaults to `results`. The script writes `pod_lorenz_original.png`,
@@ -28,7 +29,8 @@ prob = LorenzAttractor.odeproblem([1.0, 0.0, 0.0]; timespan = (0.0, 1.0))
 sol = integrate(prob, ExplicitEuler())
 data = GeometricIntegratorData(sol)
 
-k = 3
+# two of the three modes: the reduced problem has two components, and the figure shows both
+k = 2
 alg = POD()
 model = ReducedBasisModel(alg, data.snapshot)
 reduce!(model, k, alg)
