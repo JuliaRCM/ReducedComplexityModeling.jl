@@ -87,11 +87,11 @@ holds the changes since the last release until that release is cut.
   before.
 
 - `reduce!(model, k, CotangentLiftEVD())` (K17) and `reduce!(model, k, ComplexSVD())` (K18) no
-  longer throw on every call. Each stores a `2n × 2k` basis in `model.reduced_basis`. For a real
-  snapshot the basis is orthonormal and symplectic (`AᵀJA = J`). For a complex snapshot,
-  `CotangentLiftEVD()` gives an orthonormal basis that is not symplectic in that sense, while
-  `ComplexSVD()` gives a symplectic one. Neither algorithm type is exported: a caller reaches them
-  as `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
+  longer throw on every call. Each stores a `2n × 2k` basis in `model.reduced_basis`, orthonormal
+  and symplectic (`AᵀJA = J`). `CotangentLiftSVD()` and `CotangentLiftEVD()` take a real snapshot:
+  a complex one throws a `MethodError`, because a complex lift does not satisfy `AᵀJA = J`.
+  Neither algorithm type is exported: a caller reaches them as
+  `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
 
 - Help text: the module and every exported name have a docstring with text. `Parameter`,
   `ParameterSampler` and `CartesianParameterSampler` replace their empty docstrings, and `POD`,

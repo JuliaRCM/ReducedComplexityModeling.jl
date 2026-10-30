@@ -43,8 +43,7 @@ left singular vectors of `[q p]`: the first takes them from the singular value d
 squares the condition number: in the floating-point type `T` of the basis, `CotangentLiftEVD()`
 resolves only the singular vectors whose singular values exceed about `sqrt(eps(T))` times the
 largest, and its eigendecomposition of an `n × n` matrix takes `O(n³)` time and `O(n²)` memory.
-For a complex snapshot, the two cotangent lifts give `A' * A = I` and `A' * J * A = J`, with the
-canonical symplectic matrix `J`, and not `transpose(A) * J * A = J`. `ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. Where
+The two cotangent lifts take a real snapshot: a complex one throws a `MethodError`. `ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. Where
 `k` exceeds the number of singular vectors, the basis is completed with orthonormal vectors. The
 basis has the floating-point type of the snapshot's element type: `Float64` for an integer
 snapshot.
@@ -83,15 +82,15 @@ function _cotangent_lift(U)
     A
 end
 
-function reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftSVD)
+function reduce!(model::ReducedBasisModel{AT, <:Real}, k::Int, ::CotangentLiftSVD) where {AT}
     _, q, p = _split_snapshot(model.snapshot)
     model.reduced_basis = _cotangent_lift(_left_singular_vectors(hcat(q, p), k))
 end
 
 function reduce!(
-        model::ReducedBasisModel{AT, T}, k::Int, ::CotangentLiftEVD) where {AT, T}
+        model::ReducedBasisModel{AT, T}, k::Int, ::CotangentLiftEVD) where {AT, T <: Real}
     n, q, p = _split_snapshot(model.snapshot)
-    gram = Hermitian(q * q' + p * p')
+    gram = Symmetric(q * q' + p * p')
     # `eigen` sorts the eigenvalues in ascending order: take the `k` largest, largest first.
     # It computes a `Float16` matrix in `Float32`, so the vectors are converted to `T`.
     U = eigen(gram, (n - k + 1):n).vectors[:, k:-1:1]

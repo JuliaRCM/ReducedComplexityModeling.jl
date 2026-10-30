@@ -40,17 +40,10 @@ end
     @test A_svd * A_svd' ≈ A_evd * A_evd' atol=1e-12
 end
 
-@testset "A complex snapshot gives a unitary basis with AᴴJA = J, $(nameof(typeof(alg)))" for alg in (
+@testset "The cotangent lifts reject a complex snapshot, $(nameof(typeof(alg)))" for alg in (
     RCM.CotangentLiftSVD(), RCM.CotangentLiftEVD())
-    n, k, m = 6, 3, 12
-    rng = Xoshiro(5)
-    V = Matrix(qr(randn(rng, ComplexF64, n, k)).Q)
-    X = vcat(V * randn(rng, ComplexF64, k, m), V * randn(rng, ComplexF64, k, m))
-    A = reduce!(ReducedBasisModel(alg, X), k, alg)
-    @test eltype(A) === ComplexF64
-    @test A' * A ≈ I(2k) atol=1e-12
-    @test A' * canonical_J(n) * A ≈ canonical_J(k) atol=1e-12
-    @test A * (A' * X) ≈ X rtol=1e-12
+    X = ComplexF64[1 0; im 0; 0 0; 0 0]
+    @test_throws MethodError reduce!(ReducedBasisModel(alg, X), 1, alg)
 end
 
 @testset "reduce! beyond the thin SVD, $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
