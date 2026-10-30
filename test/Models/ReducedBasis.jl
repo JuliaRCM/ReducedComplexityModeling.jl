@@ -40,8 +40,7 @@ end
     @test A_svd * A_svd' ≈ A_evd * A_evd' atol=1e-12
 end
 
-@testset "The cotangent lifts reject a complex snapshot, $(nameof(typeof(alg)))" for alg in (
-    RCM.CotangentLiftSVD(), RCM.CotangentLiftEVD())
+@testset "The symplectic bases reject a complex snapshot, $(nameof(typeof(alg)))" for alg in SYMPLECTIC_ALGS
     X = ComplexF64[1 0; im 0; 0 0; 0 0]
     @test_throws MethodError reduce!(ReducedBasisModel(alg, X), 1, alg)
 end

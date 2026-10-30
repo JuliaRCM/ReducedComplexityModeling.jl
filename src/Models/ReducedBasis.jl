@@ -43,10 +43,10 @@ left singular vectors of `[q p]`: the first takes them from the singular value d
 squares the condition number: in the floating-point type `T` of the basis, `CotangentLiftEVD()`
 resolves only the singular vectors whose singular values exceed about `sqrt(eps(T))` times the
 largest, and its eigendecomposition of an `n × n` matrix takes `O(n³)` time and `O(n²)` memory.
-The two cotangent lifts take a real snapshot: a complex one throws a `MethodError`. `ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. Where
-`k` exceeds the number of singular vectors, the basis is completed with orthonormal vectors. The
-basis has the floating-point type of the snapshot's element type: `Float64` for an integer
-snapshot.
+`ComplexSVD()` gives the real form of the first `k` left singular vectors of `q + im * p`. The
+three algorithms take a real snapshot: a complex one throws a `MethodError`. Where `k` exceeds
+the number of singular vectors, the basis is completed with orthonormal vectors. The basis has
+the floating-point type of the snapshot's element type: `Float64` for an integer snapshot.
 """
 function reduce!(model::ReducedBasisModel, k::Int, ::POD)
     model.reduced_basis = _left_singular_vectors(model.snapshot, k)
@@ -97,7 +97,7 @@ function reduce!(
     model.reduced_basis = _cotangent_lift(convert(Matrix{T}, U))
 end
 
-function reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
+function reduce!(model::ReducedBasisModel{AT, <:Real}, k::Int, ::ComplexSVD) where {AT}
     n, q, p = _split_snapshot(model.snapshot)
     U = _left_singular_vectors(q + im * p, k)
     Φ, Ψ = real.(U), imag.(U)
