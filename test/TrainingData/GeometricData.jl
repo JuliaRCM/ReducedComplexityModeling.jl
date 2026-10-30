@@ -60,6 +60,16 @@ end
     end
 end
 
+@testset "Dependent: solutions with different state dimensions throw" begin
+    decay!(v, t, q, params) = (v[1] = -q[1])
+    sol1d = integrate(ODEProblem(decay!, (0.0, 0.1), 0.01, [1.0]), ExplicitEuler())
+    @test length(sol1d.q) == length(sol1.q)
+    @test_throws ArgumentError GeometricIntegratorEnsembleData(
+        RCM.GeometricSolution[sol1, sol1d], Dependent())
+    @test_throws ArgumentError GeometricIntegratorEnsembleData(
+        RCM.GeometricSolution[sol1d, sol1], Dependent())
+end
+
 @testset "A vector with a concrete element type" begin
     sols = [sol1, sol2]
     @test !(sols isa Vector{RCM.GeometricSolution})

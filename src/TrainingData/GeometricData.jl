@@ -42,7 +42,8 @@ abstract type AbstractDependence end
 The layout of the snapshot of a [`GeometricIntegratorEnsembleData`](@ref) in which the solutions
 form one snapshot matrix: one row per component of the state `q`, and the entries of `q` of the
 first solution, then those of the second, and so on, as its columns. The solutions may have
-different numbers of entries in `q`.
+different numbers of entries in `q`, but all must have the same number of components of `q`;
+otherwise the constructor throws an `ArgumentError`.
 """
 struct Dependent <: AbstractDependence end
 
@@ -66,6 +67,8 @@ end
 function Base.Array(solutions::AbstractVector{<:GeometricSolution}, ::Dependent)
     nx = sum(solution -> length(solution.q), solutions)
     ny = length(solutions[1].q[1])
+    all(solution -> length(solution.q[1]) == ny, solutions) ||
+        throw(ArgumentError("the Dependent layout needs solutions with equal state dimensions"))
     Z = zeros(_snapshot_eltype(solutions), nx, ny)
 
     i = 1

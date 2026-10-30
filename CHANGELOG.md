@@ -42,7 +42,9 @@ holds the changes since the last release until that release is cut.
 - `GeometricIntegratorEnsembleData(solutions, Dependent())` sizes its snapshot from the total number
   of entries of all solutions. It was sized from the first solution alone: a later solution with
   fewer entries left zero-filled trailing columns, and one with more entries threw a `BoundsError`.
-  The solutions may now have different numbers of entries in `q`.
+  The solutions may now have different numbers of entries in `q`. Solutions with different numbers
+  of components of `q` throw an `ArgumentError` (K26). A solution with one component after one with
+  two was copied into both rows without an error before.
 
 - In both layouts, the snapshot of `GeometricIntegratorEnsembleData` has the `promote_type` of
   the element types of the states `q` of all solutions. A `Float32` solution followed by a

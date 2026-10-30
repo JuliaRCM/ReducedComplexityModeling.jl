@@ -156,16 +156,6 @@
 - **Kind:** not verified
 - **Found:** PR #64 (CodeRabbit review on a9d6a90)
 
-### K26 · The `Dependent` layout accepts solutions with different state dimensions
-
-- **Location:** `src/TrainingData/GeometricData.jl`, `Base.Array(solutions, ::Dependent)`.
-- **Evidence:** a solution with two components of `q` and one with one component, 11 entries each,
-  give a `2 × 22` snapshot without an error. The broadcast copies the one component into both
-  rows: column 12 is `[1.0, 1.0]`. The `Independent` layout throws an `ArgumentError` for the same
-  input.
-- **Kind:** defect
-- **Found:** PR #64 (2026-10-29)
-
 ### K27 · `Parameter` with a count throws for distinct bounds one or a few ULPs apart
 
 - **Location:** `src/parameters/parameter.jl`, `Parameter(name, minimum, maximum, n::Int)`.
