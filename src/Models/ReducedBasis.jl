@@ -16,13 +16,13 @@ A reduced-basis model of the snapshot matrix `snapshot`, whose columns are the s
 the reduction scheme `alg`, such as [`POD`](@ref). [`reduce!`](@ref) computes the reduced basis
 and stores it in the field `reduced_basis`, which is undefined until then.
 """
-mutable struct ReducedBasisModel{AT, T, ST <: AbstractMatrix{T}} <: AbstractModel
+mutable struct ReducedBasisModel{AT, T, ST <: AbstractMatrix} <: AbstractModel
     reduction_scheme::AT
     snapshot::ST
     reduced_basis::Matrix{T}
 
-    function ReducedBasisModel(alg::AT, snaps::ST) where {AT, T, ST <: AbstractMatrix{T}}
-        new{AT, T, ST}(alg, snaps)
+    function ReducedBasisModel(alg::AT, snaps::ST) where {AT, ST <: AbstractMatrix}
+        new{AT, float(eltype(ST)), ST}(alg, snaps)
     end
 end
 
@@ -42,11 +42,10 @@ left singular vectors of `[q p]`: the first takes them from the singular value d
 `[q p]`, the second from the eigendecomposition of the Gram matrix `q qᵀ + p pᵀ`. `ComplexSVD()`
 gives the real form of the first `k` left singular vectors of `q + im * p`. Where `k` exceeds the
 number of singular vectors, the basis is completed with orthonormal vectors. The basis has the
-element type of the snapshot.
+floating-point type of the snapshot's element type: `Float64` for an integer snapshot.
 """
 function reduce!(model::ReducedBasisModel, k::Int, ::POD)
-    U, _, _ = svd(model.snapshot)
-    model.reduced_basis = U[:, 1:k]
+    model.reduced_basis = _left_singular_vectors(model.snapshot, k)
 end
 
 # the first `k` left singular vectors of `A`, completed to an orthonormal set where `A` has

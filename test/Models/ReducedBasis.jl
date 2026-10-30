@@ -51,7 +51,22 @@ end
     end
 end
 
-@testset "The basis has the element type of the snapshot, $(nameof(typeof(alg)))" for alg in (
+@testset "POD beyond the thin SVD" begin
+    X = reshape(Float64[1, 2, 3, 4, 5, 6], 6, 1)
+    A = reduce!(ReducedBasisModel(RCM.POD(), X), 2, RCM.POD())
+    @test size(A) == (6, 2)
+    @test A' * A ≈ I(2) atol=1e-12
+end
+
+@testset "An integer snapshot gives a Float64 basis, $(nameof(typeof(alg)))" for alg in (
+    RCM.POD(), SYMPLECTIC_ALGS...)
+    X = [1 2; 3 4; 5 6; 7 8]
+    model = ReducedBasisModel(alg, X)
+    @test model isa ReducedBasisModel{typeof(alg), Float64, Matrix{Int}}
+    @test eltype(reduce!(model, 1, alg)) === Float64
+end
+
+@testset "The basis has the element type of the snapshot,$(nameof(typeof(alg)))" for alg in (
     RCM.POD(), SYMPLECTIC_ALGS...)
     X = Float32.(lowrank_snapshot(Xoshiro(3), 4, 2, 10))
     A = reduce!(ReducedBasisModel(alg, X), 2, alg)

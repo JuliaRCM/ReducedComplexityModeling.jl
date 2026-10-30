@@ -54,6 +54,12 @@ end
     @test Z == hcat(RCM.snapshot_matrix(sol32.q), RCM.snapshot_matrix(sol64.q))
 end
 
+@testset "The snapshot of one solution has its element type" begin
+    sol32 = integrate(ODEProblem(oscillator!, (0.0f0, 0.1f0), 0.01f0, Float32[1, 0]),
+        ExplicitEuler())
+    @test eltype(GeometricIntegratorData(sol32).snapshot) === Float32
+end
+
 @testset "Dependent: the snapshot matrices side by side" begin
     for sols in ((sol1, sol2), (sol1, sol3), (sol3, sol1))
         Z = GeometricIntegratorEnsembleData(RCM.GeometricSolution[sols...], Dependent()).snapshot

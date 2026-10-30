@@ -4,7 +4,7 @@
 function snapshot_matrix(sol::DataSeries)
     n1 = length(sol)
     n2 = length(first(sol))
-    Z = zeros(n1, n2)
+    Z = zeros(eltype(first(sol)), n1, n2)
     for (i, elem) in enumerate(sol)
         Z[i, :] .= elem
     end

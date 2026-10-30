@@ -20,6 +20,17 @@ holds the changes since the last release until that release is cut.
   sees it without the export, so `Array` keeps its meaning in a caller's code; what changes is the
   export list that `names(ReducedComplexityModeling)` returns.
 
+- `ReducedBasisModel` has type parameters for the reduction scheme, the element type of the basis
+  and the type of the snapshot, and its three fields are concretely typed. They were `Any`. The
+  constructor takes an `AbstractMatrix` snapshot: a `Vector` throws a `MethodError`. The basis has
+  the floating-point type of the snapshot's element type, so a `Float32` snapshot gives a `Float32`
+  basis, and an integer snapshot gives a `Float64` basis.
+
+- `reduce!(model, k, CotangentLiftEVD())` takes the eigenvectors of the Gram matrix `q qᵀ + p pᵀ`.
+  It took the left singular vectors of `[q p]` before. The two bases span the same space, and the
+  columns can differ in sign and, for equal singular values, in order, so a result that compares
+  the basis entry by entry changes.
+
 ### Bug Fixes
 
 - `Parameter` takes a `Symbol` or a string name in every constructor form. The call
@@ -73,32 +84,29 @@ holds the changes since the last release until that release is cut.
   `path = "/"`, `h5load(Parameter, file)` throws a `KeyError`. The docstring of
   `ReducedBasisModel` no longer names packages that are not dependencies of this package.
 
-- `reduce!` with `CotangentLiftSVD()`, `CotangentLiftEVD()` or `ComplexSVD()` takes any `k ≤ n`
-  (K22). A `k` above the columns of the thin SVD threw a `BoundsError`; the basis is completed with
-  orthonormal vectors now, and stays symplectic. The basis has the element type of the snapshot
-  (K23). It was `Float64` for a `Float32` snapshot, and `compose` then promoted the reduced problem
-  to `Float64`.
+- `reduce!` takes a `k` above the columns of the thin SVD (K22), for `POD()` and for
+  `CotangentLiftSVD()`, `CotangentLiftEVD()` and `ComplexSVD()`, the last three with any `k ≤ n`.
+  It threw a `BoundsError`; the basis is completed with orthonormal vectors now, and stays
+  symplectic. The basis of the three symplectic algorithms has the floating-point type of the
+  snapshot's element type (K23). It was `Float64` for a `Float32` snapshot, and `compose` then
+  promoted the reduced problem to `Float64`. The snapshot of one solution, `GeometricIntegratorData`,
+  has the element type of the solution too. It was `Float64` always.
 
 - `GeometricIntegratorEnsembleData` takes an offset-indexed vector of solutions (K24), and the
   snapshot functions read a solution that holds only its initial entry (K25). A `step` larger than
   the number of time steps stores the initial state alone, and `snapshot_matrix` threw a
   `BoundsError` for it.
 
-### Added
+### New Features
 
 - `reduce!(model, k, CotangentLiftSVD())` stores the cotangent lift of the first `k` left singular
-  vectors of `[q p]`. `CotangentLiftEVD()` took that basis from the SVD before. It takes the
-  eigenvectors of the Gram matrix `q qᵀ + p pᵀ` now, which span the same space. Neither algorithm
-  type is exported.
+  vectors of `[q p]`. Neither algorithm type is exported.
 - `scripts/pod_lorenz.jl` draws the Lorenz solution, the reduced solution and its projection with
   CairoMakie, into the directory of `--results-dir`. It has its own environment in `scripts/`. The
   original solution uses `LorenzAttractor.plot_phase_portrait` of GeometricProblems 0.10.
 
 ### Changed
 
-- `ReducedBasisModel` has type parameters for the reduction scheme, the element type and the type
-  of the snapshot, and its field `reduced_basis` is a `Matrix` of that element type. The three
-  fields were `Any`. A model built from a `Float32` snapshot stores a `Float32` basis.
 - The tests no longer plot. `test/integration/pod_lorenz.jl` builds its problem with
   `LorenzAttractor.odeproblem` of GeometricProblems, in place of a local copy, and
   `test/helpers/problems.jl` is deleted: its other two functions were empty. `Plots` leaves the
