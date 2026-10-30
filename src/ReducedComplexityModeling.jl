@@ -1,3 +1,12 @@
+"""
+    ReducedComplexityModeling
+
+Reduced models of the solutions of geometric integrators: the snapshot data of a solution or an
+ensemble of solutions, reduced bases ([`ReducedBasisModel`](@ref), [`POD`](@ref)), parameters
+and parameter spaces with their samplers, the fit of a model's parameters to data
+([`TrainingProblem`](@ref), [`train`](@ref)), and the loaders that draw batches of data for a
+neural network ([`DataLoader`](@ref), [`Batch`](@ref)).
+"""
 module ReducedComplexityModeling
 
 using ForwardDiff
@@ -62,7 +71,6 @@ export ObservableSpace, IntrinsicSpace, TrainingData
 
 include("Models/Models.jl")
 
-export Array
 export GeometricIntegratorData, GeometricIntegratorEnsembleData
 export Dependent, Independent
 export ReducedBasisModel

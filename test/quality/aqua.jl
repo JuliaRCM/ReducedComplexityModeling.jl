@@ -3,7 +3,7 @@ using Aqua
 using Test
 
 @testset "Aqua" begin
-    Aqua.test_all(ReducedComplexityModeling; ambiguities = (; broken = true))   # issue #38
+    Aqua.test_all(ReducedComplexityModeling)
 end
 
 # The names that GeometricMachineLearning and ReducedBasisMethods reach: public, so that a check of

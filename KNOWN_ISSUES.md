@@ -67,7 +67,7 @@
 
 ### K13 · Explicit import checks report implicit and non-public dependency accesses
 
-- **Location:** `src/ReducedComplexityModeling.jl:4`, the dependency imports, and their uses in
+- **Location:** `src/ReducedComplexityModeling.jl:13`, the dependency imports, and their uses in
   included source files.
 - **Evidence:** on Julia 1.13.3, ExplicitImports 1.15.0,
   `print_explicit_imports(ReducedComplexityModeling; report_non_public = true)` reports 25
@@ -75,7 +75,7 @@
   `ArrayOrNamedTuple`, `H5DataStore`, `NamedTupleOfArrays`), and 8 non-public qualified accesses.
   `test_explicit_imports(ReducedComplexityModeling)` fails the implicit-import, public-import and
   public-qualified-access checks. `ArrayOrNamedTuple` and `NamedTupleOfArrays` are imported at
-  `src/ReducedComplexityModeling.jl:26`, for the data loader's dispatch; the other import
+  `src/ReducedComplexityModeling.jl:35`, for the data loader's dispatch; the other import
   statements are present at merge base `3b0554e`. The `Chain` and `NeuralNetwork` imports have no
   diagnostic.
 - **Kind:** defect
@@ -111,3 +111,56 @@
   third element is a fallback that no build reads.
 - **Kind:** defect
 - **Found:** 2026-10-28 (critic round 1b)
+
+### K22 · `reduce!` with `CotangentLiftEVD` or `ComplexSVD` throws when `k` exceeds the columns of the thin SVD
+
+- **Location:** `src/Models/ReducedBasis.jl`, `reduce!(model, k, ::CotangentLiftEVD)` and
+  `reduce!(model, k, ::ComplexSVD)`, at `svd(...).U[:, 1:k]`.
+- **Evidence:** on a `6 × 1` snapshot, `reduce!(ReducedBasisModel(ComplexSVD(), S), 2,
+  ComplexSVD())` throws `BoundsError: attempt to access 3×1 Matrix{ComplexF64} at index [1:3,
+  1:2]`, and `CotangentLiftEVD` with `k = 3` throws `BoundsError: attempt to access 3×2
+  Matrix{Float64} at index [1:3, 1:3]`. The thin SVD has `min(n, columns)` left singular vectors,
+  while a `2n × 2k` basis exists for every `k ≤ n`.
+- **Kind:** defect
+- **Found:** PR #64 (CodeRabbit review on a9d6a90)
+
+### K23 · `reduce!` with `CotangentLiftEVD` or `ComplexSVD` returns a `Float64` basis for a `Float32` snapshot
+
+- **Location:** `src/Models/ReducedBasis.jl`, `reduce!(model, k, ::CotangentLiftEVD)` and
+  `reduce!(model, k, ::ComplexSVD)`, at `zeros(2*n, 2*k)`.
+- **Evidence:** on a `6 × 4` `Float32` snapshot, `eltype(reduce!(model, 1, alg))` is `Float64` for
+  `CotangentLiftEVD()` and `ComplexSVD()`, and `Float32` for `POD()`. `compose` then promotes the
+  reduced problem to `Float64`.
+- **Kind:** defect
+- **Found:** PR #64 (CodeRabbit review on a9d6a90)
+
+### K24 · `GeometricIntegratorEnsembleData` rejects an offset-indexed vector of solutions
+
+- **Location:** `src/TrainingData/GeometricData.jl`, both `Base.Array(solutions, ::Dependent)` and
+  `Base.Array(solutions, ::Independent)`, which read `solutions[1]`, and the constructor, which
+  stores a `Vector{GeometricSolution}`.
+- **Evidence:** `GeometricIntegratorEnsembleData(OffsetVector([s, s], 0:1), deps)` throws
+  `DimensionMismatch: axes must agree, got (Base.OneTo(2),) and
+  (OffsetArrays.IdOffsetRange(values=0:1, indices=0:1),)` for `Dependent()` and for
+  `Independent()`.
+- **Kind:** defect
+- **Found:** PR #64 (CodeRabbit review on a9d6a90)
+
+### K25 · The snapshot functions read `q[1]`, which a solution with only its initial entry does not have
+
+- **Location:** `src/TrainingData/GeometricData.jl`, `snapshot_matrix`, `_snapshot_eltype` and both
+  `Base.Array` methods, at `q[1]`.
+- **Evidence:** CodeRabbit states that GeometricSolutions permits a `step` larger than the number of
+  time steps, and that `q` then holds only its entry at index `0`, so `q[1]` throws. No such
+  solution was built to check this.
+- **Kind:** not verified
+- **Found:** PR #64 (CodeRabbit review on a9d6a90)
+
+### K27 · `Parameter` with a count throws for distinct bounds one or a few ULPs apart
+
+- **Location:** `src/parameters/parameter.jl`, `Parameter(name, minimum, maximum, n::Int)`.
+- **Evidence:** `Parameter(:a, 0.1, nextfloat(0.1), 22)` throws an `AssertionError`, because
+  `LinRange(0.1, nextfloat(0.1), n)` has a point outside the bounds for 368 of the counts in
+  `2:500`. The special case for equal bounds does not cover distinct bounds.
+- **Kind:** defect
+- **Found:** PR #64 (pre-PR verification, 2026-10-29)

@@ -33,6 +33,7 @@ makedocs(;
     authors = "Michael Kraus",
     repo = "https://github.com/JuliaRCM/ReducedComplexityModeling.jl/blob/{commit}{path}#{line}",
     sitename = "ReducedComplexityModeling.jl",
+    checkdocs = :all,
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
         canonical = "https://JuliaRCM.github.io/ReducedComplexityModeling.jl",

@@ -1,14 +1,20 @@
+"""
+    POD()
+
+Proper orthogonal decomposition: `reduce!(model, k, POD())` takes the first `k` left singular
+vectors of the snapshot matrix as the reduced basis.
+"""
 struct POD end
 struct CotangentLiftSVD end
 struct CotangentLiftEVD end
 struct ComplexSVD end
 
 """
-Reduced Basis
+    ReducedBasisModel(alg, snapshot)
 
-Uses ModelOrderReduction methods from ReducedBasisMethods.jl
-to represent the data in latent space.
-
+A reduced-basis model of the snapshot matrix `snapshot`, whose columns are the snapshots, with
+the reduction scheme `alg`, such as [`POD`](@ref). [`reduce!`](@ref) computes the reduced basis
+and stores it in the field `reduced_basis`, which is undefined until then.
 """
 mutable struct ReducedBasisModel <: AbstractModel
     reduction_scheme::Any
@@ -20,6 +26,19 @@ mutable struct ReducedBasisModel <: AbstractModel
     end
 end
 
+"""
+    reduce!(model::ReducedBasisModel, k::Int, ::POD)
+    reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftEVD)
+    reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
+
+Compute a reduced basis from the snapshot matrix of `model`, whose columns are the snapshots,
+store it in `model.reduced_basis` and return it. With [`POD`](@ref), the basis is the matrix of
+the first `k` left singular vectors of the snapshot matrix. With `CotangentLiftEVD()` and
+`ComplexSVD()`, which the package does not export, the snapshot has `2n` rows, `q` above `p`, and
+the basis is an orthonormal and symplectic `2n × 2k` matrix: the cotangent lift of the first `k`
+left singular vectors of `[q p]`, or the real form of the first `k` left singular vectors of
+`q + im * p`.
+"""
 function reduce!(model::ReducedBasisModel, k::Int, ::POD)
     U, _, _ = svd(model.snapshot)
     model.reduced_basis = U[:, 1:k]
@@ -31,7 +50,7 @@ function reduce!(model::ReducedBasisModel, k::Int, ::CotangentLiftEVD)
     n = floor(Int, size(snapshot, 1)/2)
     q, p = snapshot[1:n, :], snapshot[(n + 1):end, :]
     cotangent_snap = hcat(q, p)
-    U, _, _ = svd(cotangent_snap)[:, 1:k]
+    U = svd(cotangent_snap).U[:, 1:k]
     reduced_basis = zeros(2*n, 2*k)
     reduced_basis[1:n, 1:k] = U
     reduced_basis[(n + 1):(2 * n), (k + 1):(2 * k)] = U
@@ -57,16 +76,24 @@ function reduce!(model::ReducedBasisModel, k::Int, ::ComplexSVD)
     n = floor(Int, size(snapshot, 1)/2)
     q, p = snapshot[1:n, :], snapshot[(n + 1):end, :]
     csvd_snap = q + 1im * p
-    U, _, _ = svd(csvd_snap)
-    ϕ, Ψ = real.(U), imag.(U)
+    U = svd(csvd_snap).U[:, 1:k]
+    Φ, Ψ = real.(U), imag.(U)
     reduced_basis = zeros(2*n, 2*k)
     reduced_basis[1:n, 1:k] = Φ
     reduced_basis[1:n, (k + 1):(2 * k)] = -Ψ
     reduced_basis[(n + 1):(2 * n), 1:k] = Ψ
-    reduced_basis[((n + 1):(2 * n):(k + 1)):(2 * k)] = Φ
+    reduced_basis[(n + 1):(2 * n), (k + 1):(2 * k)] = Φ
     model.reduced_basis = reduced_basis
 end
 
+"""
+    compose(prob::ODEProblem, model::ReducedBasisModel)
+
+The reduced problem of `prob` in the reduced basis `R = model.reduced_basis`: an `ODEProblem` in
+the reduced coordinates `u`, with the vector field `R' * v(R * u)`, where `v` is the vector field
+of `prob`, and the initial condition `R' * q₀`. The time span, the time step and the parameters
+are those of `prob`. Call [`reduce!`](@ref) on `model` first.
+"""
 function compose(prob::ODEProblem, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
 
@@ -84,6 +111,13 @@ function compose(prob::ODEProblem, model::ReducedBasisModel)
     red_prob
 end
 
+"""
+    project(rsol::GeometricSolution, model::ReducedBasisModel)
+
+Map the solution `rsol` of a reduced problem (see [`compose`](@ref)) back to the full space. The
+result is the matrix `model.reduced_basis * Q`, where the columns of `Q` are the entries of
+`rsol.q`; its columns are the states in the full space.
+"""
 function project(rsol::GeometricSolution, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
     Rᵦ * snapshot_matrix(rsol.q)

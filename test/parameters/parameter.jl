@@ -2,7 +2,7 @@ using ReducedComplexityModeling
 using Test
 
 samples = [0.0, 1.0, 2.0, 3.0, 4.0]
-h5file = "temp.h5"
+h5file = joinpath(mktempdir(), "temp.h5")
 
 @testset "Parameter" begin
     @test_throws AssertionError Parameter(:μ, 1.0, 4.0, samples)
@@ -74,6 +74,73 @@ h5file = "temp.h5"
     p2 = h5load(Parameter, h5file; path = "μ")
     rm(h5file)
     @test p1 == p2
+end
+
+@testset "Parameter keeps the element type of its bounds ($T)" for T in (Float32, Float64)
+    for name in (:mu, "mu")
+        p = Parameter(name, zero(T), one(T), 5)
+        @test p.name === :mu
+        @test minimum(p) isa T
+        @test maximum(p) isa T
+        @test eltype(collect(p)) === T
+        @test collect(p) == T[0, 1 // 4, 1 // 2, 3 // 4, 1]
+    end
+
+    # bounds across the range of `T`; each gives `T` samples between the bounds
+    for (a, b) in ((-zero(T), nextfloat(zero(T))), (floatmin(T), eps(T)),
+        (-floatmax(T) / 2, floatmax(T) / 2), (-one(T), floatmax(T)),
+        ((T(10)^k .* (-one(T), one(T)) for k in -8:4:8)...))
+        p = Parameter(:mu, a, b, 3)
+        @test eltype(collect(p)) === T
+        @test all(a .≤ collect(p) .≤ b)
+    end
+end
+
+@testset "Every form takes a Symbol or a string name" begin
+    for name in (:mu, "mu")
+        p = Parameter(name, 0.0f0, 1.0f0, 5)
+        @test p isa Parameter{Float32, Vector{Float32}}
+        @test p.name === :mu
+        @test collect(p) == Float32[0, 1 // 4, 1 // 2, 3 // 4, 1]
+
+        p = Parameter(name, 0.0, 1.0, 3)
+        @test p isa Parameter{Float64, Vector{Float64}}
+        @test p.name === :mu
+        @test collect(p) == [0.0, 0.5, 1.0]
+
+        p = Parameter(name, 0.0, 1.0)
+        @test p isa Parameter{Float64, Nothing}
+        @test p.name === :mu
+
+        p = Parameter(name, [0.0, 1.0])
+        @test p isa Parameter{Float64, Vector{Float64}}
+        @test p.name === :mu
+        @test (minimum(p), maximum(p), collect(p)) == (0.0, 1.0, [0.0, 1.0])
+
+        p = Parameter(name, 0.0, 1.0, [0.5])
+        @test p isa Parameter{Float64, Vector{Float64}}
+        @test p.name === :mu
+        @test collect(p) == [0.5]
+    end
+    @test_throws MethodError Parameter(:a, 0, 10, 5)
+end
+
+@testset "A count gives the samples of LinRange without duplicates" begin
+    for name in (:μ, "μ")
+        @test collect(Parameter(name, 1.0, 1.0, 5)) == [1.0]
+        @test length(Parameter(name, 1.0, 1.0, 5)) == 1
+        # `LinRange(0.1, 0.1, n)` rounds above the bounds for these counts
+        for n in (6, 8, 11, 15)
+            p = Parameter(name, 0.1, 0.1, n)
+            @test p isa Parameter{Float64, Vector{Float64}}
+            @test collect(p) == [0.1]
+        end
+        @test collect(Parameter(name, 0.1f0, 0.1f0, 6)) == Float32[0.1]
+        @test collect(Parameter(name, 0.1, 0.1, 0)) == Float64[]
+        @test collect(Parameter(name, 1, 1, 3)) == [1]
+        @test collect(Parameter(name, 1, 1, 0)) == Int[]
+        @test_throws MethodError Parameter(name, 0, 1, 3)
+    end
 end
 
 @testset "Parameter show" begin

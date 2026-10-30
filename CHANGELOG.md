@@ -12,6 +12,69 @@ tags. It is named as a gap rather than reconstructed, because a changelog assemb
 fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
 holds the changes since the last release until that release is cut.
 
+## [Unreleased]
+
+### Breaking Changes
+
+- `ReducedComplexityModeling` no longer exports `Array`. The binding is `Core`'s, and every module
+  sees it without the export, so `Array` keeps its meaning in a caller's code; what changes is the
+  export list that `names(ReducedComplexityModeling)` returns.
+
+### Bug Fixes
+
+- `Parameter` takes a `Symbol` or a string name in every constructor form. The call
+  `Parameter("μ", minimum, maximum, n)` returns a `Parameter` whose samples are those of
+  `LinRange(minimum, maximum, n)` when the bounds differ, without duplicates. Equal bounds and a
+  positive count give the one sample `minimum`. A count of 0 gives no sample. It threw a
+  `MethodError` before, because two methods matched it equally well. This relates to issue #38:
+  the two string-name methods that clashed are deleted, and
+  `detect_ambiguities(ReducedComplexityModeling)` reports no ambiguity. A gap remains: unequal
+  integer bounds with a sample count still throw a `MethodError`. Their `LinRange` has a float
+  element type, so `Parameter(:a, 0, 10, 5)` throws.
+
+- `GeometricIntegratorEnsembleData(solutions, Independent())` builds its snapshot (K16). It threw
+  an `ErrorException` before. The snapshot is an array of size `ny × nx × ns`, for `ns` solutions
+  with `nx` entries of a state `q` with `ny` components. Its slice `[:, :, i]` is the snapshot
+  matrix of solution `i`, in the layout of `GeometricIntegratorData`. Solutions with different
+  numbers of entries in `q` throw an `ArgumentError`. Solutions with different numbers of
+  components of `q` also throw an `ArgumentError`.
+
+- `GeometricIntegratorEnsembleData(solutions, Dependent())` sizes its snapshot from the total number
+  of entries of all solutions. It was sized from the first solution alone: a later solution with
+  fewer entries left zero-filled trailing columns, and one with more entries threw a `BoundsError`.
+  The solutions may now have different numbers of entries in `q`. Solutions with different numbers
+  of components of `q` throw an `ArgumentError` (K26). A solution with one component after one with
+  two was copied into both rows without an error before. The snapshot of one solution and the
+  `Dependent` snapshot change their layout with `permutedims`. `Array(Z')` conjugated complex
+  values. No complex state reaches them today, because `integrate` does not take one.
+
+- In both layouts, the snapshot of `GeometricIntegratorEnsembleData` has the `promote_type` of
+  the element types of the states `q` of all solutions. A `Float32` solution followed by a
+  `Float64` solution gives a `Float64` snapshot, so a value of `1e40`, which is above
+  `floatmax(Float32)`, is kept. The order of the columns is unchanged.
+
+- `GeometricIntegratorEnsembleData` and both `Base.Array(solutions, ::Dependent)` and
+  `Base.Array(solutions, ::Independent)` take a vector with a concrete element type, such as
+  `[sol, sol]`. `GeometricIntegratorEnsembleData([sol, sol], Dependent())` threw a `MethodError`
+  before.
+
+- `reduce!(model, k, CotangentLiftEVD())` (K17) and `reduce!(model, k, ComplexSVD())` (K18) no
+  longer throw on every call. Each stores a `2n × 2k` basis in `model.reduced_basis`, orthonormal
+  and symplectic (`AᵀJA = J`). Neither algorithm type is exported: a caller reaches them as
+  `ReducedComplexityModeling.CotangentLiftEVD` and `ReducedComplexityModeling.ComplexSVD`.
+
+- Help text: the module and every exported name have a docstring with text. `Parameter`,
+  `ParameterSampler` and `CartesianParameterSampler` replace their empty docstrings, and `POD`,
+  `reduce!`, `compose`, `project`, `hassamples`, `GeometricIntegratorData`,
+  `GeometricIntegratorEnsembleData`, `Dependent` and `Independent` gain one. The exports test
+  requires the docstring of every exported or public name to contain that name. The docstrings of
+  `h5save` and `h5load` name their three methods and their arguments (K21). Each shows a round
+  trip, as a doctest. `h5save` writes a `ParameterSpace`, and `h5load` reads it back.
+  `h5save(file, p)` writes a `Parameter` `p` to the group of its name.
+  `h5load(Parameter, file; path = string(p.name))` reads it back. With the default
+  `path = "/"`, `h5load(Parameter, file)` throws a `KeyError`. The docstring of
+  `ReducedBasisModel` no longer names packages that are not dependencies of this package.
+
 ## [0.4.1] — 2026-10-29
 
 ### Changed

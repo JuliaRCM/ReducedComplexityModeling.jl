@@ -10,6 +10,8 @@ if "core" in GROUPS
     @safetestset "Parameter samplers" include("parameters/parametersampler.jl")
     @safetestset "Parameter spaces" include("parameters/parameterspace.jl")
     @safetestset "TrainingData" include("TrainingData/TrainingData.jl")
+    @safetestset "Snapshots of geometric solutions" include("TrainingData/GeometricData.jl")
+    @safetestset "Reduced bases" include("Models/ReducedBasis.jl")
     @safetestset "TrainingProblem" include("TrainingProblem.jl")
     @safetestset "The loader's names and constructors" include("data_loader/data_loader.jl")
     @safetestset "Batching" include("data_loader/batch.jl")

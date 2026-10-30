@@ -8,7 +8,7 @@ grid = [0.0 1.0 0.0
         0.0 1.0 4.0
         0.5 1.0 4.0
         1.0 1.0 4.0]
-h5file = "temp.h5"
+h5file = joinpath(mktempdir(), "temp.h5")
 
 @testset "ParameterSpace" begin
     μ = Parameter(:μ, 0.0, 1.0, 3)
