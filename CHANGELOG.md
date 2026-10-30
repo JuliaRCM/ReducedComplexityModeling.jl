@@ -55,7 +55,9 @@ holds the changes since the last release until that release is cut.
   fewer entries left zero-filled trailing columns, and one with more entries threw a `BoundsError`.
   The solutions may now have different numbers of entries in `q`. Solutions with different numbers
   of components of `q` throw an `ArgumentError` (K26). A solution with one component after one with
-  two was copied into both rows without an error before.
+  two was copied into both rows without an error before. The snapshot of one solution and the
+  `Dependent` snapshot change their layout with `permutedims`. `Array(Z')` conjugated complex
+  values. No complex state reaches them today, because `integrate` does not take one.
 
 - In both layouts, the snapshot of `GeometricIntegratorEnsembleData` has the `promote_type` of
   the element types of the states `q` of all solutions. A `Float32` solution followed by a
