@@ -12,6 +12,21 @@ tags. It is named as a gap rather than reconstructed, because a changelog assemb
 fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
 holds the changes since the last release until that release is cut.
 
+## [Unreleased] — targeting 0.5.1
+
+### Changed
+
+- The reduced vector field of `compose` no longer allocates where the state has the element type
+  of the basis and the full vector field does not allocate. It keeps two buffers of the full state,
+  which `compose` allocates once. One call allocated 1952 B at `N = 100, k = 5` and 16 736 B at
+  `N = 1000, k = 20` in `Float64`, and 1040 B and 8464 B in `Float32`, at the base commit
+  `9674632`; it allocates 0 B at all four. A call with another element type, such as the
+  `ForwardDiff.Dual` numbers of an implicit integrator, allocates as before. The buffers belong to
+  the reduced problem, so one integrator at a time uses it. The new `test/Models/compose.jl`
+  asserts the value, the inference and the allocations, and `ForwardDiff` joins the test
+  environment for its `Dual` call. Both columns of bytes are that test's readings, in a cold
+  process: the first against the source of `9674632`, the second against this release's.
+
 ## [0.5.0] — 2026-10-30
 
 ### Breaking Changes

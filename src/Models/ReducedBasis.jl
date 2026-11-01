@@ -120,15 +120,32 @@ The reduced problem of `prob` in the reduced basis `R = model.reduced_basis`: an
 the reduced coordinates `u`, with the vector field `R' * v(R * u)`, where `v` is the vector field
 of `prob`, and the initial condition `R' * q₀`. The time span, the time step and the parameters
 are those of `prob`. Call [`reduce!`](@ref) on `model` first.
+
+The reduced vector field keeps two buffers of the full state, in the element type of the basis,
+and does not allocate where `u` has that element type and the vector field of `prob` does not
+allocate. A call with another element type, such as the `ForwardDiff.Dual` numbers of an implicit
+integrator's Jacobian, allocates its own arrays. The buffers belong to the reduced problem, so one
+integrator at a time uses it.
 """
 function compose(prob::ODEProblem, model::ReducedBasisModel)
     Rᵦ = model.reduced_basis
+    utemp = similar(Rᵦ, size(Rᵦ, 1))
+    dutemp = similar(utemp)
 
     function red_v(du, t, u, p)
-        utemp = Rᵦ*u
-        dutemp = zero(utemp)
-        functions(prob).v(dutemp, t, utemp, p)
-        du .= Rᵦ' * dutemp
+        if eltype(u) === eltype(utemp)
+            mul!(utemp, Rᵦ, u)
+            # the full vector field overwrites `dutemp`
+            functions(prob).v(dutemp, t, utemp, p)
+            mul!(du, Rᵦ', dutemp)
+        else
+            # `u` has another element type than the buffers, such as a `Dual`, which they cannot
+            # hold
+            ufull = Rᵦ * u
+            dufull = zero(ufull)
+            functions(prob).v(dufull, t, ufull, p)
+            du .= Rᵦ' * dufull
+        end
     end
 
     u0 = initial_conditions(prob).q
