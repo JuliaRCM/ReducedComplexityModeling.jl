@@ -18,14 +18,15 @@ function allocations(f::F, du::D, t::TT, u::U, p::P) where {F, D, TT, U, P}
     @allocated f(du, t, u, p)
 end
 
-# The reduced problem of a full problem in `T` with `N` states, in a POD basis of `k` vectors.
+# A POD basis of `k` vectors for a full problem in `T` with `N` states, and the reduced problem of
+# that full problem in that basis.
 function reduced_problem(::Type{T}, N, k) where {T}
     rng = Xoshiro(N + k)
     prob = ODEProblem(full_v!, (zero(T), one(T)), T(1) / T(10), randn(rng, T, N);
         parameters = (a = T(1) / T(2),))
     model = ReducedBasisModel(POD(), randn(rng, T, N, 2k))
     reduce!(model, k, POD())
-    prob, model.reduced_basis, compose(prob, model)
+    model.reduced_basis, compose(prob, model)
 end
 
 # `Rᵦ' * v(Rᵦ * u)`, computed by hand with fresh arrays.
@@ -39,7 +40,7 @@ end
 @testset "The reduced vector field of compose, $T, N = $N, k = $k" for T in REAL_ELTYPES,
     (N, k) in ((100, 5), (1000, 20))
 
-    prob, R, red_prob = reduced_problem(T, N, k)
+    R, red_prob = reduced_problem(T, N, k)
     red_v = functions(red_prob).v
     p = parameters(red_prob)
     t = zero(T)
