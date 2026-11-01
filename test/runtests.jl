@@ -12,6 +12,7 @@ if "core" in GROUPS
     @safetestset "TrainingData" include("TrainingData/TrainingData.jl")
     @safetestset "Snapshots of geometric solutions" include("TrainingData/GeometricData.jl")
     @safetestset "Reduced bases" include("Models/ReducedBasis.jl")
+    @safetestset "The reduced vector field of compose" include("Models/compose.jl")
     @safetestset "TrainingProblem" include("TrainingProblem.jl")
     @safetestset "The loader's names and constructors" include("data_loader/data_loader.jl")
     @safetestset "Batching" include("data_loader/batch.jl")
