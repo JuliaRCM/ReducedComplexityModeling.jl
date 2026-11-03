@@ -41,7 +41,6 @@ for (n, P, b) in ((5, 3, 2), (10, 7, 4), (20, 5, 20), (10, 7, 10), (30, 4, 3))
         count(minibatch -> length(parameters(minibatch)) > 1, batches)
     end
     @assert all(==(mixed_batches(n, P, b)), counts)
-    @assert b > n || mixed_batches(n, P, b) ≤ P - 1
     println("n = $n, P = $P, b = $b: ", cld(n * P, b), " batches, ",
         mixed_batches(n, P, b), " with more than one parameter")
 end

@@ -120,7 +120,8 @@
 - **Evidence:** the function shuffles the start positions and the parameter indices separately,
   takes their product in column order and cuts this list into pieces of length `b`. So every
   parameter uses one permutation of the start positions, and an epoch runs through the parameters
-  one after the other:
+  one after the other. An excerpt of the output on Julia 1.13.3, whose seeded lines can differ on
+  another version:
 
       julia --startup-file=no --project=. scripts/batch_parameter_floor.jl
       6 time steps, 3 parameters, Batch(2, 1, 1): 8 batches
