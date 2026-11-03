@@ -111,3 +111,56 @@
   third element is a fallback that no build reads.
 - **Kind:** defect
 - **Found:** 2026-10-28 (critic round 1b)
+
+### K28 · A minibatch of a tensor is not a uniform sample of the pairs (time, parameter)
+
+- **Location:** `src/data_loader/batch.jl:212`, `batch_over_two_axes`, which the `Batch` functor
+  calls for a `DataLoader` (`:219`) and for a `ParametricDataLoader`
+  (`src/data_loader/parametric_data_loader.jl:103`).
+- **Evidence:** the function shuffles the start positions and the parameter indices separately,
+  takes their product in column order and cuts this list into pieces of length `b`. So every
+  parameter uses one permutation of the start positions, and an epoch runs through the parameters
+  one after the other. An excerpt of the output on Julia 1.13.3, whose seeded lines can differ on
+  another version:
+
+      julia --startup-file=no --project=. scripts/batch_parameter_floor.jl
+      6 time steps, 3 parameters, Batch(2, 1, 1): 8 batches
+      distinct parameters per batch: [1, 1, 2, 1, 1, 1, 1, 1]
+      batches: [[(5, 2), (4, 2)], [(2, 2), (1, 2)], [(3, 2), (5, 1)], [(4, 1), (2, 1)], [(1, 1), (3, 1)], [(5, 3), (4, 3)], [(2, 3), (1, 3)], [(3, 3)]]
+
+      n start positions, P parameters, batch size b, over 200 seeds
+      n = 5, P = 3, b = 2: 8 batches, 1 with more than one parameter
+      n = 10, P = 7, b = 4: 18 batches, 3 with more than one parameter
+      n = 10, P = 7, b = 10: 7 batches, 0 with more than one parameter
+
+      mean square difference from the epoch mean, n = 100, P = 10, 400 epochs
+      between-parameter term: 0.7963
+      b = 5: loader measured 0.9933, closed form 0.9942, uniform partition closed form 0.3641
+      b = 10: loader measured 0.89, closed form 0.89, uniform partition closed form 0.1811
+      b = 100: loader measured 0.7963, closed form 0.7963, uniform partition closed form 0.0165
+
+  An epoch has `⌈nP/b⌉` batches and no pair appears twice. For `b ≤ n`, a batch holds more than
+  one parameter once for each `k` in `1:(P - 1)` where `b` does not divide `k n`, so at most `P - 1`
+  batches do. The script asserts these counts over 200 seeds, and the measured column against its
+  closed form. Where one axis has length one, the batches are a uniform partition: a matrix, a
+  vector or a `(q, p)` pair with `autoencoder = true`, or one trajectory. A tensor with
+  `autoencoder = true` keeps both axes, and its batches have the same form as above.
+
+  This is a question of design and no broken promise. The docstrings of `Batch` and
+  `number_of_batches` promise that an epoch draws every pair once, which holds, and no docstring
+  or page of this package promises uniform batches. The manual of `GeometricMachineLearning`
+  describes this product, with a figure.
+
+  **Consequence:** the mean of a per-sample gradient over a batch has a mean square difference from
+  the full gradient with a term that does not fall with `b`: the mean over the parameters of the
+  square difference between that parameter's gradient and the full gradient. A uniform partition
+  has no such term and falls as `1/b`. Steps inside an epoch also follow the data of one parameter
+  at a time. The term is zero only where the gradients of all parameters agree. No training was
+  compared, so the effect on a trained model is not measured.
+
+  **Possible fix:** cut one shuffle of all pairs,
+  `shuffle(vec(collect(Iterators.product(1:n, 1:P))))`. This keeps the number of batches and
+  draws every pair once, and it changes the batches that every downstream training sees, so the
+  manual of `GeometricMachineLearning` needs the same change. The fix was not tried on the suite.
+- **Kind:** defect
+- **Found:** 2026-11-04

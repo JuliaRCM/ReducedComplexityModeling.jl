@@ -33,6 +33,13 @@ holds the changes since the last release until that release is cut.
   release that handles a `LimitedAccuracy` type in its captured-variable check, which
   `test/quality/jet.jl` reaches. `Zygote = "0.7.5"` is the version that the resolve picks.
   `SafeTestsets = "0.1"` completes the list.
+- The docstring of `Batch` states how the functor cuts an epoch of a tensor: the batches run through
+  the parameters one after the other, so a minibatch is not a uniform sample of the pairs of a time
+  index and a parameter index. A caller who compares batch sizes needs this, because a minibatch
+  gradient then has a variance between the parameters that does not fall with the batch size. The
+  batches themselves do not change. `scripts/batch_parameter_floor.jl` checks the counts and the
+  variance against closed forms, in the package's own environment, and `KNOWN_ISSUES.md` holds the
+  question as K28.
 
 ## [0.5.1] — 2026-11-01
 

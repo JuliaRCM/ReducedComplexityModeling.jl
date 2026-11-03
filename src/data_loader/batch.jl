@@ -11,6 +11,14 @@ An instance of `Batch` can be called on an instance of `DataLoader` to produce a
 
 The output of applying `batch::Batch` to `dl::DataLoader` is a vector of minibatches, each a vector of tuples of two integers: the first is the *time index* and the second one is the *parameter index*.
 
+# The minibatches of an epoch
+
+The functor shuffles the start positions and the parameter indices separately, takes their product in column order and cuts this list into minibatches of the batch size. Every pair of a time index and a parameter index appears once, and the start positions of every parameter come in the same order. So an epoch runs through the parameters one after the other, and a minibatch is not a uniform sample of the pairs.
+
+With `n` start positions per parameter and `P` parameters, a batch size `b ≤ n` leaves at most `P - 1` minibatches with more than one parameter. The mean of a per-sample gradient over a minibatch therefore has a variance between the parameters that does not fall with `b`.
+
+Where one axis has length one, the minibatches are a uniform partition of the indices. This holds for a matrix or a vector with `autoencoder = true` and for one trajectory. A tensor with `autoencoder = true` keeps both of its axes.
+
 # Examples
 
 Consider the following example for drawing batches of size 2 for an instance of `DataLoader` constructed with a vector:
@@ -42,6 +50,26 @@ true
 Here the first index is always 1 (the time dimension). We get a total number of 3 batches.
 The last batch is only of size 1 because we *sample without replacement*.
 Also see the docstring for [`DataLoader(::AbstractVector)`](@ref).
+
+A tensor with 6 time steps and 3 parameters has 5 start positions per parameter for a `Batch` with a sequence length and a prediction window of 1:
+
+```jldoctest
+using ReducedComplexityModeling
+
+dl = DataLoader(rand(1, 6, 3); suppress_info = true)
+batches = Batch(2, 1, 1)(dl)
+
+@assert length(batches) == 8
+@assert count(minibatch -> length(unique(last.(minibatch))) > 1, batches) == 1
+
+true
+
+# output
+
+true
+```
+
+Only one of the 8 minibatches holds two parameters, and each of the others holds one.
 """
 struct Batch{BatchType}
     batch_size::Int
