@@ -24,9 +24,10 @@ holds the changes since the last release until that release is cut.
   and HDF5 0.16 are no longer allowed.
 - The test environment has a `[compat]` entry for each of its own dependencies. Without one, the
   downgrade check resolves a dependency to its first release. `GeometricIntegrators = "0.18.6"` is
-  the first release that allows `GeometricBase` 0.15. `OffsetArrays = "1.13"` is the first release
-  that allows `Adapt` 4, which the rest of the environment needs; OffsetArrays 1.0.0 also makes
-  `reshape(::Array, ::Int, ::Colon)` ambiguous on Julia 1.12. `Aqua = "0.8.14"` is the first
+  the first release that allows `GeometricBase` 0.15. `OffsetArrays = "1.14"`: 1.13.0 is the first
+  release that allows `Adapt` 4, which the rest of the environment needs, but it overwrites
+  `Base.fill` on Julia 1.12 and so does not precompile there; 1.14.0 does. OffsetArrays 1.0.0 also
+  makes `reshape(::Array, ::Int, ::Colon)` ambiguous on Julia 1.12. `Aqua = "0.8.14"` is the first
   release whose piracy check finds the method table on Julia 1.12; earlier releases read
   `TypeName.mt`, which Julia 1.12 removes. `JET = "0.10.1, 0.11, 0.12, 0.13"` starts at the first
   release that handles a `LimitedAccuracy` type in its captured-variable check, which
