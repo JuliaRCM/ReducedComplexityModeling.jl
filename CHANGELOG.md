@@ -19,17 +19,18 @@ holds the changes since the last release until that release is cut.
 - The package requires KernelAbstractions 0.10 and AbstractNeuralNetworks 0.10:
   `KernelAbstractions = "0.10.5"` and `AbstractNeuralNetworks = "0.10"`. KernelAbstractions 0.9 and
   AbstractNeuralNetworks 0.9 are no longer allowed, so an environment that holds either of them
-  cannot load this release. On KernelAbstractions 0.10, `CPU()` is the PoCL backend, so the gather
-  kernel of `DataLoader` runs through OpenCL on the CPU. The source of the package does not change.
+  cannot install this release. On KernelAbstractions 0.10, `CPU()` is the PoCL backend, so the
+  gather kernel of `DataLoader` runs through OpenCL on the CPU. The source of the package does not
+  change.
 
 ### Changed
 
 - The lower bounds in `[compat]` are the versions that the downgrade check of CI reaches. It
   resolves `Project.toml` and `test/Project.toml` together at their lower bounds on Julia 1.12,
-  and on the old bounds that resolve picked a higher version of four dependencies. The bounds are
+  and on the old bounds that resolve picked a higher version of five dependencies. The bounds are
   now `ForwardDiff = "0.10.36, 1"`, `HDF5 = "0.17"`, `LazyArrays = "2.0.2"` and
   `TypedTables = "1.2"`, the versions that the resolve picks. LazyArrays 1 and HDF5 0.16 are no
-  longer allowed.
+  longer allowed. The fifth, KernelAbstractions, moves to 0.10 under Breaking Changes.
 - The test environment has a `[compat]` entry for each of its own dependencies. Without one, the
   downgrade check resolves a dependency to its first release. `GeometricIntegrators = "0.18.6"` is
   the first release that allows `GeometricBase` 0.15. `OffsetArrays = "1.14"`: 1.13.0 is the first
