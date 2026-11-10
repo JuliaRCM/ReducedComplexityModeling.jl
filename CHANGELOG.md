@@ -12,7 +12,7 @@ tags. It is named as a gap rather than reconstructed, because a changelog assemb
 fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
 holds the changes since the last release until that release is cut.
 
-## [Unreleased] — targeting 0.6.0
+## [0.6.0] — 2026-11-10
 
 ### Breaking Changes
 
