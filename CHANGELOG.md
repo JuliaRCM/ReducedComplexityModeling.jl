@@ -24,8 +24,10 @@ holds the changes since the last release until that release is cut.
   The source of the package does not change.
 - The test environment allows GeometricIntegrators 0.19, because GeometricIntegrators 0.19.1
   admits GeometricSolutions 0.7 and no 0.18 release does: `GeometricIntegrators = "0.18.6"`
-  becomes `"0.18.6, 0.19"`. GeometricIntegrators 0.19 exchanges `SymplecticEulerA` and
-  `SymplecticEulerB`; the tests use neither, so no result changes. `GeometricProblems = "0.10"` in the test and script environments already admits
+  becomes `"0.18.6, 0.19"`. GeometricIntegrators 0.19 and GeometricIntegratorsBase 0.7 exchange
+  the meaning of `SymplecticEulerA` and `SymplecticEulerB` and of `SymplecticEulerARK` and
+  `SymplecticEulerBRK`; the tests use none of them, so no result changes.
+  `GeometricProblems = "0.10"` in the test and script environments already admits
   GeometricProblems 0.10.1, which allows GeometricSolutions 0.7.
 
 ## [0.6.0] — 2026-11-10
