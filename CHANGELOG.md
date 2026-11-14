@@ -12,6 +12,24 @@ tags. It is named as a gap rather than reconstructed, because a changelog assemb
 fact loses exactly the reasoning that makes it worth keeping. The `[Unreleased]` section below
 holds the changes since the last release until that release is cut.
 
+## [Unreleased]
+
+### Changed
+
+- The package allows GeometricSolutions 0.7: `GeometricSolutions = "0.6.6"` becomes
+  `"0.6.6, 0.7"`. In GeometricSolutions 0.7, `EnsembleSolution` has a fifth type parameter for its
+  time series. The `DataLoader` and `ParametricDataLoader` methods for an `EnsembleSolution` name
+  only its first three parameters, so they dispatch as before on both versions. The package does not
+  re-export GeometricSolutions, so the new parameter does not reach its users through this package.
+  The source of the package does not change.
+- The test environment allows GeometricIntegrators 0.19, because GeometricIntegrators 0.19.1
+  admits GeometricSolutions 0.7 and no 0.18 release does: `GeometricIntegrators = "0.18.6"`
+  becomes `"0.18.6, 0.19"`. GeometricIntegrators 0.19 and GeometricIntegratorsBase 0.7 exchange
+  the meaning of `SymplecticEulerA` and `SymplecticEulerB` and of `SymplecticEulerARK` and
+  `SymplecticEulerBRK`; the tests use none of them, so no result changes.
+  `GeometricProblems = "0.10"` in the test and script environments already admits
+  GeometricProblems 0.10.1, which allows GeometricSolutions 0.7.
+
 ## [0.6.0] — 2026-11-10
 
 ### Breaking Changes
